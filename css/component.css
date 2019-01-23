@@ -41,7 +41,7 @@ body {
 	visibility: hidden;
 	width: 100%;
 	opacity: 0;
-	/*height: 100%;*/
+	height: 100%;
 }
 
 .slide--current {
@@ -49,7 +49,7 @@ body {
 	z-index: 100;
 	visibility: visible;
 	opacity: 1;
-	/*height: 100%;*/
+	height: 100%;
 }
 
 .slide__mover {
@@ -127,7 +127,6 @@ body {
 /* Zoomer */
 .zoomer {
 	position: relative;
-	top: 0;
 	width: 100%;
 	height: 450px; /* this is needed for IE10 so that vertical flexbox centering works */
 }
@@ -144,13 +143,13 @@ body {
 	justify-content: center;
 }
 
-/*.zoomer__image {*/
-	/*display: block;*/
-	/*margin: 0;*/
-	/*-webkit-flex: none;*/
-	/*-ms-flex: none;*/
-	/*flex: none;*/
-/*}*/
+.zoomer__image {
+	display: block;
+	margin: 0;
+	-webkit-flex: none;
+	-ms-flex: none;
+	flex: none;
+}
 
 .zoomer__area,
 .preview {
@@ -212,7 +211,7 @@ body {
 	z-index: 1000;
 	top: 0;
 	left: -100%;
-	overflow: visible;
+	overflow: hidden;
 	overflow-y: scroll;
 	width: 100%;
 	height: 100%;
@@ -230,11 +229,10 @@ body {
 	display: -webkit-flex;
 	display: -ms-flexbox;
 	display: flex;
-	overflow: visible;
-	height: 100%;
+	overflow: hidden;
+	height: 0;
 	width: 100%;
-	/*height: 0;*/
-	/*min-height: 100%;*/
+	min-height: 100%;
 	margin: 0 auto;
 	padding: 2em 0;
 	pointer-events: none;

@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" class="no-js">
 <head>
+    <title>分析报告</title>
 	<meta charset="UTF-8" />
 	<meta http-equiv="X-UA-Compatible" content="IE=edge">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,18 +9,17 @@
 	<link rel="stylesheet" type="text/css" href="css/demo.css" />
 	<link rel="stylesheet" type="text/css" href="css/component.css" />
 	<script src="js/modernizr.custom.js"></script>
-	<title>分析报告</title>
 	<link rel="stylesheet" type="text/css" href="css/nav.css" />
 </head>
 <body>
 <!--author = gu-de-qing-->
 <nav class="nav">
-    {% for module, results in result.items() %}
+    {% for module, module_result in result.items() %}
 	<details class="menu" open>
         <summary>{{ module }}</summary>
         <ul>
-            {% for key, value in results %}
-            <li><a href="{{ key }}" target='iframe'>{{ value }}</a></li>
+            {% for key, value in module_result.items() %}
+            <li><a href="{{ value }}" target='iframe'>{{ key }}</a></li>
             {% endfor %}
         </ul>
 	</details>
@@ -27,12 +27,12 @@
 	<br>
 	<br>
 	<address class="address">
-		邮箱：info@dunwill.com
-        电话+86-21-57077888
-        传真+86-21-57077889
-        地址：上海市松江区中心路1158号7号楼6楼
+		邮箱：info@dunwill.com<br/>
+        电话+86-21-57077888<br/>
+        传真+86-21-57077889<br/>
+        地址：上海市松江区中心路1158号7号楼6楼<br/>
 	</address>
-    <img src="images/">
+    <img src="images/dunwill.gif" alt="dunwill-two-bar-code"/>
 </nav>
 
 

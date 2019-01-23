@@ -18,6 +18,8 @@ def slider_report(images=None, image_ids=None, image_desc=None, template="templa
             tmp_list = list()
             for each in images:
                 target = os.path.join(out_dir, os.path.basename(each))
+                if os.path.exists(target):
+                    continue
                 os.symlink(each, target)
                 tmp_list.append(target)
             images = tmp_list
@@ -77,8 +79,8 @@ def make_report(result_dict, index_template="templates/index.jinja2", name='inde
 
 
 if __name__ == '__main__':
-    # import sys
-    # result = qc_slides(sys.argv[1])
-    # make_report(result)
-    slider_report(exp_to_match_images="images/*html", name='test.html', link_images=False)
+    import sys
+    result = qc_slides(sys.argv[1])
+    make_report(result)
+    # slider_report(exp_to_match_images="images/*pdf", name='test.html', link_images=False)
 

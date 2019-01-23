@@ -212,7 +212,7 @@
 				dynamics.css(bodyEl, { scale: bodyScale });
 				dynamics.animate(bodyEl, { scale: 1 }, {
 					type: dynamics.easeInOut,
-					duration: 500
+					duration: 100
 				});
 			}
 
@@ -279,7 +279,7 @@
 		// animate the next element in
 		dynamics.animate(nextEl, { opacity: 1, translateX: 0 }, {
 			type: dynamics.spring,
-			duration: 5000,
+			duration: 1000,
 			friction: 600,
 			complete: function() {
 				items.forEach(function(item) { classie.remove(item, 'slide--current'); });

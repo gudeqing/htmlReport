@@ -258,7 +258,7 @@
 		// animate the current element out
 		dynamics.animate(currentEl, { opacity: 0, translateX: dir === 'right' ? -1*currentEl.offsetWidth/2 : currentEl.offsetWidth/2, rotateZ: dir === 'right' ? -10 : 10 }, {
 			type: dynamics.spring,
-			duration: 1000,
+			duration: 3000,
 			friction: 600,
 			complete: function() {
 				dynamics.css(itemCurrent, { opacity: 0, visibility: 'hidden' });
@@ -279,7 +279,7 @@
 		// animate the next element in
 		dynamics.animate(nextEl, { opacity: 1, translateX: 0 }, {
 			type: dynamics.spring,
-			duration: 1000,
+			duration: 5000,
 			friction: 600,
 			complete: function() {
 				items.forEach(function(item) { classie.remove(item, 'slide--current'); });
@@ -293,7 +293,7 @@
 		dynamics.animate(nextTitleEl, { translateX: 0, opacity: 1 }, {
 			type: dynamics.bezier,
 			points: [{"x":0,"y":0,"cp":[{"x":0.2,"y":1}]},{"x":1,"y":1,"cp":[{"x":0.3,"y":1}]}],
-			duration: 650
+			duration: 800
 		});
 	}
 

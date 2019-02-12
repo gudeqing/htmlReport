@@ -109,8 +109,8 @@ class ClusterHeatMap(object):
             else:
                 self.data = self.process_data()
         else:
-            # 不断测试发现，index如果为纯数字，当且仅当有基因聚类的时候将不能正常显示热图，
-            # 应该是plotly的bug，推测热图自动调整绘图的过程中，会用到数字索引，奇怪的很！
+            # 不断测试发现, index如果为纯数字, 当且仅当有基因聚类的时候将不能正常显示热图, 
+            # 应该是plotly的bug, 推测热图自动调整绘图的过程中, 会用到数字索引, 奇怪的很！
             print('Using random data to do test !')
             self.data = pd.DataFrame(np.random.randint(0, 20, (100, 6)),
                                      columns=list('abcdef'),

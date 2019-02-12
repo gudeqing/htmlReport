@@ -14,7 +14,7 @@ class ClusterHeatMap(object):
     def __init__(self, data_file=None, out_name='clusterHeatMap.html',
                  sample_cluster_method='single', sample_distance_metric="correlation",
                  gene_cluster_method='average', gene_distance_metric="euclidean",
-                 cluster_gene=False, cluster_sample=True, label_gene=False,
+                 cluster_gene=False, cluster_sample=False, label_gene=False,
                  only_sample_dendrogram=False,
                  only_gene_dendrogram=False,
                  do_correlation_cluster=False, corr_method='pearson',

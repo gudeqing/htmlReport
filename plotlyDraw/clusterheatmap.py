@@ -18,7 +18,7 @@ class ClusterHeatMap(object):
                  only_sample_dendrogram=False,
                  only_gene_dendrogram=False,
                  do_correlation_cluster=False, corr_method='pearson',
-                 sample_cluster_num=2, gene_cluster_num=10,
+                 sample_cluster_num=1, gene_cluster_num=1,
                  sample_group=None, log_base=2, zscore_before_cluster=False,
                  lower_exp_cutoff=0.1, pass_lower_exp_num=None,
                  row_sum_cutoff=0.1, cv_cutoff=0.01,
@@ -111,6 +111,7 @@ class ClusterHeatMap(object):
         else:
             # 不断测试发现，index如果为纯数字，当且仅当有基因聚类的时候将不能正常显示热图，
             # 应该是plotly的bug，推测热图自动调整绘图的过程中，会用到数字索引，奇怪的很！
+            print('Using random data to do test !')
             self.data = pd.DataFrame(np.random.randint(0, 20, (100, 6)),
                                      columns=list('abcdef'),
                                      index=['x'+str(x) for x in range(100)])
@@ -488,7 +489,7 @@ class ClusterHeatMap(object):
 
         :param exp_pd: pandas DataFrame, expression matrix
         :param transpose: if to transpose the expression matrix
-        :param n_clusters: int, optional, default: 8. The number of clusters to generate.
+        :param n_clusters: int, optional, default: 10. The number of clusters to generate.
         :param method: methods for calculating the distance between the newly formed clusters.
             Choices: ['single', 'average', 'weighted', 'centroid', 'complete', 'median', 'ward']
         :param metric: The distance metric to use.
@@ -505,7 +506,8 @@ class ClusterHeatMap(object):
         if transpose:
             exp_pd = exp_pd.transpose()
         if n_clusters > exp_pd.shape[0]:
-            print("n_clusters is bigger than sample number!!")
+            print("n_clusters is bigger than sample number",
+                  "it will be forced to be sample number !")
             n_clusters = exp_pd.shape[0]
 
         if self.do_correlation_cluster:
@@ -537,9 +539,11 @@ class ClusterHeatMap(object):
             except:
                 print("fastcluster failed, we will try scipy.cluster.hierarchy")
                 z = sch.linkage(exp_pd, method=method, metric=metric)
+        if n_clusters <= 1:
+            return z, None
+        # write out subcluster
         labels = exp_pd.index
         subcluster = self.get_subcluster(z, labels, num=n_clusters)
-        # write out subcluster
         if output is not None:
             if not os.path.exists(output):
                 os.mkdir(output)

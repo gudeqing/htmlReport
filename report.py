@@ -192,6 +192,10 @@ def exp_analysis_slides(report_dir, level='gene', slide_template="templates/slid
     return result_dict
 
 
+def alignment_summary_plot(result_dir, report_dir):
+    pass
+
+
 def make_report(result_dir):
     report_dir = mkdir('Report')
     index_html_path = os.path.join(report_dir, 'index.html')

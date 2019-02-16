@@ -1,9 +1,13 @@
 import os
 from functools import partial
+from collections import OrderedDict
 import pandas as pd
 import numpy as np
+import json
+import textwrap
 from plotly import tools
 import plotly.graph_objs as go
+import plotly.figure_factory as ff
 from plotly.offline import plot as plt
 plt = partial(plt, auto_open=False)
 
@@ -367,3 +371,71 @@ def exp_density(exp_table, outdir=os.getcwd(), row_sum_cutoff=0.1, exp_cutoff=0.
     out_name = os.path.join(outdir, 'Expression.density.html')
     plt(fig, filename=out_name)
     return out_name
+
+
+def alignment_summary_table(files, outdir=os.getcwd()):
+    summary_dict_list = [json.load(open(x), object_pairs_hook=OrderedDict) for x in files]
+    sample_list = [os.path.basename(x).split('.', 1)[0] for x in files]
+    df = pd.DataFrame(summary_dict_list, index=sample_list).round(2)
+    df.index.name = 'sample'
+    header = ['<br>'.join(textwrap.wrap(x, width=10)) for x in [df.index.name] + list(df.columns)]
+    df = df.reset_index()
+    df.columns = header
+    colorscale = [[0, '#4d004c'], [.5, '#f2e5ff'], [1, '#ffffff']]
+    table = ff.create_table(df, height_constant=20, colorscale=colorscale)
+    fig = go.Figure(data=table)
+    out_name = os.path.join(outdir, 'AlignmentSummaryTable.html')
+    plt(fig, filename=out_name)
+
+
+def target_region_depth_distribution(files, outdir=os.getcwd()):
+    data_dict = [json.load(open(x), object_pairs_hook=OrderedDict) for x in files]
+    sample_list = [os.path.basename(x).split('.', 1)[0] for x in files]
+    for distr_dict, sample in zip(data_dict, sample_list):
+        layout = go.Layout(
+            title="Base depth distribution",
+            # xaxis=dict(title='Depth'),
+            yaxis=dict(title='Base number ratio', type='log'),
+        )
+        total = sum(distr_dict.values())
+        norm_y = [x/total for x in distr_dict.values()]
+        trace = go.Bar(x=list(distr_dict.keys()), y=norm_y, )
+        fig = go.Figure(data=[trace], layout=layout)
+        out_name = os.path.join(outdir, '{}.baseDepthDistribution.html'.format(sample))
+        plt(fig, filename=out_name)
+
+
+def chromosome_read_distribution(files, outdir=os.getcwd(), top=25):
+    all_data = list()
+    samples = list()
+    for each in files:
+        sample = os.path.basename(each).split('.', 1)[0]
+        data = pd.read_table(each, header=None, index_col=0)
+        data = data.sort_values(by=2, ascending=False)
+        data = data.iloc[:top, [1, 2]]
+        trace = go.Bar(x=data.index, y=data[2])
+        layout = go.Layout(
+            title='Read distribution on top {} chromosomes/scaffolds'.format(top),
+            xaxis=dict(title='Chromosomes/Scaffolds'),
+            yaxis=dict(title='Mapped read number')
+        )
+        fig = go.Figure(data=[trace], layout=layout)
+        out_name = os.path.join(outdir, '{}.ChromosomeReadDistribution.html'.format(sample))
+        plt(fig, filename=out_name)
+        all_data.append(data[2]/data[2].sum())
+        samples.append(sample)
+    # overall
+    data = pd.concat(all_data, axis=1)
+    data.columns = samples
+    data = data.transpose()
+    traces = [go.Bar(x=data.index, y=data[x], name=x) for x in data.columns]
+    layout = go.Layout(
+        title='Read distribution on top {} chromosomes/scaffolds across samples'.format(top),
+        # xaxis=dict(title='Sample'),
+        yaxis=dict(title='Mapped read number percent'),
+        barmode='stack'
+    )
+    fig = go.Figure(data=traces, layout=layout)
+    out_name = os.path.join(outdir, 'samples.ChromosomeReadDistribution.html')
+    plt(fig, filename=out_name)
+

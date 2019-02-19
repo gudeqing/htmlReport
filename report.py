@@ -193,7 +193,49 @@ def exp_analysis_slides(report_dir, level='gene', slide_template="templates/slid
 
 
 def alignment_summary_plot(result_dir, report_dir):
-    pass
+    outdir = os.path.join(report_dir, 'AlignmentSummary')
+    mkdir(outdir)
+    summary_files = glob.glob(os.path.join(result_dir, 'AlignmentSummary', '*.alignment_summary.json'))
+    plotting.alignment_summary_table(summary_files, outdir=outdir)
+    # depth distr
+    depth_distr = glob.glob(os.path.join(result_dir, 'AlignmentSummary', '*.depth.distribution.json'))
+    plotting.target_region_depth_distribution(depth_distr, outdir=outdir)
+    # chromosome_read_distribution
+    chromosome_distr = glob.glob(os.path.join(result_dir, 'AlignmentSummary', '*.chromosome.alignment.stat.txt'))
+    plotting.chromosome_read_distribution(chromosome_distr, outdir=outdir, top=30)
+
+
+def alignment_summary_slides(report_dir, slide_template="templates/slide.jinja2", reg="*.html"):
+    step_desc = {
+        "Summary": "比对结果统计表",
+        "DepthDistribution": "捕获区域的测序深度分布图",
+        "ChrReadDistribution": "比对到各染色体或scaffold的read分布图",
+    }
+    name = 'AlignmentSummary'
+    result_dict = {name: dict()}
+
+    result_dict[name]['Summary'] = slider_report(
+        images=[os.path.join(report_dir, 'AlignmentSummary', 'AlignmentSummaryTable.html')],
+        image_ids=["Alignment summary table"],
+        image_desc=[step_desc['Summary']],
+        template=slide_template,
+        name=os.path.join(report_dir, 'htmls', 'AlignmentSummaryTable.html')
+    )
+
+    result_dict[name]['DepthDistribution'] = slider_report(
+        exp_to_match_images=os.path.join(report_dir, 'AlignmentSummary', '*.baseDepthDistribution.html'),
+        description=step_desc['DepthDistribution'],
+        template=slide_template,
+        name=os.path.join(report_dir, 'htmls', 'BaseDepthDistribution.html')
+    )
+
+    result_dict[name]['ChrReadDistribution'] = slider_report(
+        exp_to_match_images=os.path.join(report_dir, 'AlignmentSummary', '*.ChromosomeReadDistribution.html'),
+        description=step_desc['ChrReadDistribution'],
+        template=slide_template,
+        name=os.path.join(report_dir, 'htmls', 'ChromosomeReadDistribution.html')
+    )
+    return result_dict
 
 
 def make_report(result_dir):
@@ -210,9 +252,13 @@ def make_report(result_dir):
     result_dict = dict()
     result_dict.update(qc_slides(report_dir, slide_template=slide_template, reg='*.html'))
     result_dict.update(exp_analysis_slides(report_dir, slide_template=slide_template))
+    alignment_summary_plot(result_dir, report_dir)
+    result_dict.update(alignment_summary_slides(report_dir, slide_template=slide_template))
+
     # use relative path
     for section in result_dict:
         for each in result_dict[section]:
+            # print(section)
             tmp_path = os.path.abspath(result_dict[section][each])
             result_dict[section][each] = os.path.relpath(tmp_path, start=os.path.abspath(report_dir))
 

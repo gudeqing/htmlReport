@@ -351,8 +351,6 @@ def exp_density(exp_table, outdir=os.getcwd(), row_sum_cutoff=0.1, exp_cutoff=0.
     traces = list()
     density_point_df_list = get_density(data)
     color_pool = get_color_pool(len(data.columns))
-    print(data.columns)
-    print(len(color_pool), len(data.columns))
     for ind, (sample, color) in enumerate(zip(data.columns, color_pool)):
         print(sample)
         trace = go.Scatter(

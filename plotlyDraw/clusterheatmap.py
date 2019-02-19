@@ -21,7 +21,7 @@ class ClusterHeatMap(object):
                  sample_cluster_num=1, gene_cluster_num=1,
                  sample_group=None, log_base=2, zscore_before_cluster=False,
                  lower_exp_cutoff=0.1, pass_lower_exp_num=None,
-                 row_sum_cutoff=0.1, cv_cutoff=0.01,
+                 row_sum_cutoff=0.5, cv_cutoff=0,
                  width=800, height=800, gene_label_size=6,
                  color_scale='YlGnBu', preprocess_data_func=None,
                  left_dendrogram_width=0.15, top_dendrogram_height=0.15):

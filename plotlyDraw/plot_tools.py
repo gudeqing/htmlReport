@@ -19,7 +19,7 @@ def get_color_pool(n):
 
     from colorsys import hls_to_rgb
     color_pool = []
-    for i in np.arange(60., 360., 360. / n):
+    for i in np.arange(60., 360., 300. / n):
         hue = i / 300.
         rand_num = np.random.random_sample()
         lightness = (50 + rand_num * 10) / 100.
@@ -350,14 +350,20 @@ def exp_density(exp_table, outdir=os.getcwd(), row_sum_cutoff=0.1, exp_cutoff=0.
     data = np.log(data)
     traces = list()
     density_point_df_list = get_density(data)
-    for ind, sample in enumerate(data.columns):
+    color_pool = get_color_pool(len(data.columns))
+    print(data.columns)
+    print(len(color_pool), len(data.columns))
+    for ind, (sample, color) in enumerate(zip(data.columns, color_pool)):
+        print(sample)
         trace = go.Scatter(
             x=density_point_df_list[ind]['exp'],
             y=density_point_df_list[ind]['density'],
             mode='lines',
             fill='tonexty',
+            fillcolor=color,
             name=sample,
-            opacity=0.7
+            opacity=0.7,
+            line=dict(color=color)
         )
         traces.append(trace)
 
@@ -378,11 +384,13 @@ def alignment_summary_table(files, outdir=os.getcwd()):
     sample_list = [os.path.basename(x).split('.', 1)[0] for x in files]
     df = pd.DataFrame(summary_dict_list, index=sample_list).round(2)
     df.index.name = 'sample'
+    out_table = os.path.join(outdir, 'alignment_summary.txt')
+    df.to_csv(out_table, index=True, header=True, sep='\t')
     header = ['<br>'.join(textwrap.wrap(x, width=10)) for x in [df.index.name] + list(df.columns)]
     df = df.reset_index()
     df.columns = header
     colorscale = [[0, '#4d004c'], [.5, '#f2e5ff'], [1, '#ffffff']]
-    table = ff.create_table(df, height_constant=20, colorscale=colorscale)
+    table = ff.create_table(df, colorscale=colorscale)
     fig = go.Figure(data=table)
     out_name = os.path.join(outdir, 'AlignmentSummaryTable.html')
     plt(fig, filename=out_name)
@@ -405,32 +413,35 @@ def target_region_depth_distribution(files, outdir=os.getcwd()):
         plt(fig, filename=out_name)
 
 
-def chromosome_read_distribution(files, outdir=os.getcwd(), top=25):
+def chromosome_read_distribution(files, outdir=os.getcwd(), top=30):
     all_data = list()
     samples = list()
     for each in files:
         sample = os.path.basename(each).split('.', 1)[0]
-        data = pd.read_table(each, header=None, index_col=0)
-        data = data.sort_values(by=2, ascending=False)
-        data = data.iloc[:top, [1, 2]]
+        data = pd.read_table(each, header=None, index_col=0).iloc[:-1, :]
+        data = data.sort_values(by=2, ascending=False).loc[:, [2]].iloc[:top, :]
+        total = data[2].sum()
         trace = go.Bar(x=data.index, y=data[2])
         layout = go.Layout(
-            title='Read distribution on top {} chromosomes/scaffolds'.format(top),
-            xaxis=dict(title='Chromosomes/Scaffolds'),
+            title='Read distribution on chromosomes/scaffolds',
+            # xaxis=dict(title='Chromosomes/Scaffolds'),
             yaxis=dict(title='Mapped read number')
         )
         fig = go.Figure(data=[trace], layout=layout)
         out_name = os.path.join(outdir, '{}.ChromosomeReadDistribution.html'.format(sample))
         plt(fig, filename=out_name)
-        all_data.append(data[2]/data[2].sum())
+        all_data.append(data[2]/total)
         samples.append(sample)
     # overall
-    data = pd.concat(all_data, axis=1)
+    data = pd.concat(all_data, axis=1, sort=False).fillna(0)
     data.columns = samples
+    out_table = os.path.join(outdir, 'ChromosomeReadDistribution.txt')
+    data.to_csv(out_table, index=True, header=True, sep='\t')
     data = data.transpose()
-    traces = [go.Bar(x=data.index, y=data[x], name=x) for x in data.columns]
+    color_pool = get_color_pool(data.shape[1])
+    traces = [go.Bar(x=data.index, y=data[x], name=x, marker=dict(color=c)) for x, c in zip(data.columns, color_pool)]
     layout = go.Layout(
-        title='Read distribution on top {} chromosomes/scaffolds across samples'.format(top),
+        title='Read distribution on chromosomes/scaffolds across samples',
         # xaxis=dict(title='Sample'),
         yaxis=dict(title='Mapped read number percent'),
         barmode='stack'
@@ -439,3 +450,53 @@ def chromosome_read_distribution(files, outdir=os.getcwd(), top=25):
     out_name = os.path.join(outdir, 'samples.ChromosomeReadDistribution.html')
     plt(fig, filename=out_name)
 
+
+if __name__ == '__main__':
+    def introduce_command(func):
+        import argparse
+        import inspect
+        import json
+        import time
+        if isinstance(func, type):
+            description = func.__init__.__doc__
+        else:
+            description = func.__doc__
+        parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
+        func_args = inspect.getfullargspec(func)
+        arg_names = func_args.args
+        arg_defaults = func_args.defaults
+        arg_defaults = ['None']*(len(arg_names) - len(arg_defaults)) + list(arg_defaults)
+        for arg, value in zip(arg_names, arg_defaults):
+            if arg == 'self':
+                continue
+            if value == 'None':
+                parser.add_argument('-'+arg, required=True, metavar=arg)
+            elif type(value) == bool:
+                if value:
+                    parser.add_argument('--'+arg, action="store_false", help='default: True')
+                else:
+                    parser.add_argument('--'+arg, action="store_true", help='default: False')
+            elif value is None:
+                parser.add_argument('-' + arg, default=value, metavar='Default:' + str(value), )
+            else:
+                parser.add_argument('-' + arg, default=value, type=type(value), metavar='Default:' + str(value), )
+        if func_args.varargs is not None:
+            print("warning: *varargs is not supported, and will be neglected! ")
+        if func_args.varkw is not None:
+            print("warning: **keywords args is not supported, and will be neglected! ")
+        args = parser.parse_args().__dict__
+        with open("Argument_detail.json", 'w') as f:
+            json.dump(args, f, indent=2, sort_keys=True)
+        start = time.time()
+        func(**args)
+        print("total time: {}s".format(time.time() - start))
+
+    import sys
+    if sys.argv[1] == 'exp_density':
+        sys.argv.remove('exp_density')
+        introduce_command(exp_density)
+    elif sys.argv[1] == 'exp_pca':
+        sys.argv.remove('exp_pca')
+        introduce_command(exp_pca)
+    else:
+        pass

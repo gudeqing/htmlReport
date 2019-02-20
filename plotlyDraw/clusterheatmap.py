@@ -155,17 +155,19 @@ class ClusterHeatMap(object):
         exp_pd = exp_pd[exp_pd.sum(axis=1) > self.row_sum_cutoff]
         exp_pd = exp_pd[exp_pd.std(axis=1)/exp_pd.mean(axis=1) > self.cv_cutoff]
         pass_state = exp_pd.apply(lambda x: sum(x > self.lower_exp_cutoff), axis=1)
-        pass_num_cutoff = int(exp_pd.shape[1]) / 3 if self.pass_lower_exp_num is None else self.pass_lower_exp_num
+        pass_num_cutoff = int(exp_pd.shape[1] / 3) if self.pass_lower_exp_num is None else self.pass_lower_exp_num
         exp_pd = exp_pd[pass_state >= pass_num_cutoff]
         if self.logbase == 2:
             exp_pd = np.log2(exp_pd+1)
         elif self.logbase == 10:
             exp_pd = np.log10(exp_pd+1)
-        elif self.logbase is None:
+        elif not self.logbase or self.logbase == 1:
             pass
         else:
             raise Exception('log base must be one of [2, 10, None] ')
-        out_name = os.path.join(self.outdir, 'cluster.preprocessed.data')
+        out_name = os.path.join(self.outdir, 'cluster.log{}.cv{}.{}outof{}over{}.preprocessed.data'.format(
+            self.logbase, self.cv_cutoff, pass_num_cutoff, exp_pd.shape[1], self.lower_exp_cutoff
+        ))
         exp_pd.to_csv(out_name, header=True, index=True, sep='\t')
         return exp_pd
 
@@ -323,6 +325,8 @@ class ClusterHeatMap(object):
         if not self.ordered_genes:
             self.ordered_genes = range(self.data.shape[0])
         heat_data = self.data.iloc[self.ordered_genes, self.ordered_samples]
+        out_name = os.path.join(self.outdir, 'cluster.heatmap.data')
+        heat_data.to_csv(out_name, header=True, index=True, sep='\t')
         heat_map = go.Heatmap(
             x=list(heat_data.columns),
             y=list(heat_data.index),

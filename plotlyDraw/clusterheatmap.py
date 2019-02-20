@@ -14,7 +14,8 @@ class ClusterHeatMap(object):
     def __init__(self, data_file=None, out_name='clusterHeatMap.html',
                  sample_cluster_method='single', sample_distance_metric="correlation",
                  gene_cluster_method='average', gene_distance_metric="euclidean",
-                 cluster_gene=False, cluster_sample=False, label_gene=False,
+                 cluster_gene=False, cluster_sample=False,
+                 show_gene_label=False, hide_sample_label=False,
                  only_sample_dendrogram=False,
                  only_gene_dendrogram=False,
                  do_correlation_cluster=False, corr_method='pearson',
@@ -22,7 +23,8 @@ class ClusterHeatMap(object):
                  sample_group=None, log_base=2, zscore_before_cluster=False,
                  lower_exp_cutoff=0.1, pass_lower_exp_num=None,
                  row_sum_cutoff=0.5, cv_cutoff=0,
-                 width=800, height=800, gene_label_size=6,
+                 width=800, height=800,
+                 gene_label_size=6, sample_label_size=10, sample_label_angle=45,
                  color_scale='YlGnBu', preprocess_data_func=None,
                  left_dendrogram_width=0.15, top_dendrogram_height=0.15):
         """
@@ -78,6 +80,8 @@ class ClusterHeatMap(object):
             with open(sample_group) as f:
                 self.group_dict = dict(line.strip().split('\t')[:2] for line in f)
         self.gene_label_size = gene_label_size
+        self.sample_label_size = sample_label_size
+        self.sample_label_angle = sample_label_angle
         self.do_correlation_cluster = do_correlation_cluster
         self.ordered_genes = None
         self.ordered_samples = None
@@ -85,7 +89,8 @@ class ClusterHeatMap(object):
         self.cluster_sample = cluster_sample
         self.only_sample_dendrogram = only_sample_dendrogram
         self.only_gene_dendrogram = only_gene_dendrogram
-        self.label_gene = label_gene
+        self.label_gene = show_gene_label
+        self.label_sample = not hide_sample_label
         self.height = height
         self.width = width
         self.colorscale = color_scale
@@ -182,6 +187,9 @@ class ClusterHeatMap(object):
             'anchor': 'y',
             'autorange': True,
             'scaleanchor': "x3",
+            'tickangle': self.sample_label_angle,
+            'tickfont': {'size': self.sample_label_size},
+            'showticklabels': self.label_sample
         }
 
     def heatmap_yaxis(self):
@@ -327,6 +335,8 @@ class ClusterHeatMap(object):
         heat_data = self.data.iloc[self.ordered_genes, self.ordered_samples]
         out_name = os.path.join(self.outdir, 'cluster.heatmap.data')
         heat_data.to_csv(out_name, header=True, index=True, sep='\t')
+        # plotly plot data from bottom to top, thus we have to use [::-1], or it will not match dendrogram
+        heat_data = self.data.iloc[self.ordered_genes[::-1], self.ordered_samples]
         heat_map = go.Heatmap(
             x=list(heat_data.columns),
             y=list(heat_data.index),

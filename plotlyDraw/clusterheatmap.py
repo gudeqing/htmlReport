@@ -22,8 +22,8 @@ class ClusterHeatMap(object):
                  sample_cluster_num=1, gene_cluster_num=1,
                  sample_group=None, log_base=2, zscore_before_cluster=False,
                  lower_exp_cutoff=0.1, pass_lower_exp_num=None,
-                 row_sum_cutoff=0.5, cv_cutoff=0,
-                 width=800, height=800,
+                 row_sum_cutoff=0.5, cv_cutoff=0.,
+                 width=1000, height=800,
                  gene_label_size=6, sample_label_size=10, sample_label_angle=45,
                  color_scale='YlGnBu', preprocess_data_func=None,
                  left_dendrogram_width=0.15, top_dendrogram_height=0.15):
@@ -681,11 +681,10 @@ if __name__ == '__main__':
                 continue
             if value == 'None':
                 parser.add_argument('-'+arg, required=True, metavar=arg)
-            elif type(value) == bool:
-                if value:
-                    parser.add_argument('--'+arg, action="store_false", help='default: True')
-                else:
-                    parser.add_argument('--'+arg, action="store_true", help='default: False')
+            elif value is True:
+                parser.add_argument('--'+arg, action="store_false", help='bool, default: True')
+            elif value is False:
+                parser.add_argument('--'+arg, action="store_true", help='bool, default: False')
             elif value is None:
                 parser.add_argument('-' + arg, default=value, metavar='Default:' + str(value), )
             else:

@@ -244,7 +244,7 @@ def exp_pca(exp_table, row_sum_cutoff=0.1, exp_cutoff=0.1, cv_cutoff=0.05,
     data = data[data.std(axis=1)/data.mean(axis=1) > cv_cutoff]
     data.to_csv(os.path.join(outdir, 'pca.filtered.data.txt'), header=True, index=True, sep='\t')
     data = np.log(data+1)
-    # data = data.apply(preprocessing.scale, axis=0)
+    data = data.apply(preprocessing.scale, axis=0)
     data = data.transpose()
     pca = decomposition.PCA()
     pca.fit(data)
@@ -274,21 +274,29 @@ def exp_pca(exp_table, row_sum_cutoff=0.1, exp_cutoff=0.1, cv_cutoff=0.05,
             f.write(str(each) + '\t' + str(pc_ratio[each]) + '\n')
 
     # color and maker pool
+    if type(group_dict) == str:
+        if os.path.exists(group_dict):
+            with open(group_dict) as f:
+                group_dict = dict(x.strip().split()[:2] for x in f if x.strip())
+        else:
+            raise FileExistsError('group_dict file not existed!')
+
     if group_dict is None or not group_dict:
-        group_dict = dict()
+        group_dict = OrderedDict()
     for sample in result.index:
         if sample not in group_dict:
             group_dict[sample] = sample
-    groups = list(set(group_dict.values()))
-    colors = get_color_pool(len(groups))
+    groups = list()
+    for group in group_dict.values():
+        if group not in groups:
+            groups.append(group)
+    colors = get_color_pool(len(group_dict))
     makers = range(len(groups))
-    group_colors = dict(zip(groups, colors))
+    sample_colors = dict(zip(group_dict.keys(), colors))
     group_makers = dict(zip(groups, makers))
-    sample_colors = dict()
     sample_makers = dict()
     for sample in result.index:
         group = group_dict[sample]
-        sample_colors[sample] = group_colors[group]
         sample_makers[sample] = group_makers[group]
 
     # plot
@@ -310,6 +318,8 @@ def exp_pca(exp_table, row_sum_cutoff=0.1, exp_cutoff=0.1, cv_cutoff=0.05,
         traces.append(trace)
     layout = dict(
         showlegend=True,
+        width=800,
+        height=600,
         xaxis=dict(title='PC1({:.2%})'.format(pc_ratio['PC1'])),
         yaxis=dict(title='PC2({:.2%})'.format(pc_ratio['PC2']))
     )

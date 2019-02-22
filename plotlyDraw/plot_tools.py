@@ -1,6 +1,7 @@
 import os
 from functools import partial
 from collections import OrderedDict
+from glob import glob
 import pandas as pd
 import numpy as np
 import json
@@ -388,18 +389,43 @@ def exp_density(exp_table, outdir=os.getcwd(), row_sum_cutoff=0.1, exp_cutoff=0.
 
 
 def alignment_summary_table(files, outdir=os.getcwd()):
+    if type(files) == str:
+        files = glob(files)
+        if not files:
+            raise ValueError('No target file matched!')
+    #
     summary_dict_list = [json.load(open(x), object_pairs_hook=OrderedDict) for x in files]
     sample_list = [os.path.basename(x).split('.', 1)[0] for x in files]
     df = pd.DataFrame(summary_dict_list, index=sample_list).round(2)
     df.index.name = 'sample'
     out_table = os.path.join(outdir, 'alignment_summary.txt')
     df.to_csv(out_table, index=True, header=True, sep='\t')
-    header = ['<br>'.join(textwrap.wrap(x, width=10)) for x in [df.index.name] + list(df.columns)]
-    df = df.reset_index()
-    df.columns = header
-    colorscale = [[0, '#4d004c'], [.5, '#f2e5ff'], [1, '#ffffff']]
-    table = ff.create_table(df, colorscale=colorscale)
-    fig = go.Figure(data=table)
+    # header = ['<br>'.join(textwrap.wrap(x, width=10)) for x in [df.index.name] + list(df.columns)]
+    # df = df.reset_index()
+    # df.columns = header
+    # colorscale = [[0, '#4d004c'], [.5, '#f2e5ff'], [1, '#ffffff']]
+    # table = ff.create_table(df, colorscale=colorscale)
+    # fig = go.Figure(data=table)
+    # out_name = os.path.join(outdir, 'AlignmentSummaryTable.html')
+    # plt(fig, filename=out_name)
+
+    df.reset_index(inplace=True)
+    header_values = ['<b>' + '<br>'.join(textwrap.wrap(x, width=10)) + '</b>' for x in list(df.columns)]
+    trace = go.Table(
+        # columnwidth=[max(len(str(x)) for x in df[y]) for y in df.columns],
+        header=dict(values=header_values,
+                    fill=dict(color='#C2D4FF'),
+                    align=['left'] * df.shape[1]),
+        cells=dict(values=[df[x] for x in df.columns],
+                   fill=dict(color='#F5F8FF'),
+                   align=['left'] * df.shape[1]))
+    layout = dict(
+        title='Alignment Summary',
+        autosize=True,
+        margin=dict(t=25, l=10, r=10, b=10),
+        showlegend=False,
+    )
+    fig = go.Figure(data=[trace], layout=layout)
     out_name = os.path.join(outdir, 'AlignmentSummaryTable.html')
     plt(fig, filename=out_name)
 
@@ -459,6 +485,179 @@ def chromosome_read_distribution(files, outdir=os.getcwd(), top=30):
     plt(fig, filename=out_name)
 
 
+def CollectAlignmentSummaryMetrics(files, outdir=os.getcwd()):
+    if type(files) == str:
+        files = glob(files)
+    data = list()
+    for each in files:
+        if not os.path.exists(each):
+            pass
+        sample = os.path.basename(each).split('.', 1)[0]
+        summary = pd.read_table(each, comment='#', index_col=0, header=0)
+        summary =summary.loc[["PAIR"], :]
+        summary.index = [sample]
+        data.append(summary)
+    data = pd.concat(data, axis=0).dropna(axis=1).drop('PCT_ADAPTER', axis=1).round(4)
+    data = data.transpose()
+    out_table = os.path.join(outdir, 'AlignmentSummaryMetrics.xls')
+    data.to_csv(out_table, index=True, header=True, sep='\t')
+
+    for i in range(0, data.shape[1], 10):
+        df = data.iloc[:, i: i+10]
+        df.index.name = 'CATEGORY'
+        df.reset_index(inplace=True)
+        header_values = ['<b>'+'<br>'.join(textwrap.wrap(x, width=12))+'</b>' for x in list(df.columns)]
+        trace = go.Table(
+            columnwidth=[max(len(str(x)) for x in df[y]) for y in df.columns],
+            header=dict(values=header_values,
+                        fill=dict(color='#C2D4FF'),
+                        align=['left'] * df.shape[1]),
+            cells=dict(values=[df[x] for x in df.columns],
+                       fill=dict(color='#F5F8FF'),
+                       align=['left'] * df.shape[1]))
+        layout = dict(
+            title='Alignment Summary',
+            autosize=True,
+            margin=dict(t=25, l=10, r=10, b=10),
+            showlegend=False,
+        )
+        fig = go.Figure(data=[trace], layout=layout)
+        out_name = os.path.join(outdir, 'AlignmentSummaryMetrics_{}.html'.format(i+1))
+        plt(fig, filename=out_name)
+    return data
+
+
+def CollectInsertSizeMetrics(files, outdir=os.getcwd()):
+    if type(files) == str:
+        files = glob(files)
+    data = list()
+    for each in files:
+        if not os.path.exists(each):
+            pass
+        # histogram_line = [x[0] for x in enumerate(open(each)) if x[1].startswith('## HISTOGRAM')][0]
+        sample = os.path.basename(each).split('.', 1)[0]
+        summary = pd.read_table(each, comment='#', header=0, nrows=1)
+        summary.index = [sample]
+        data.append(summary)
+    data = pd.concat(data, axis=0).dropna(axis=1).round(4)
+    data = data.transpose()
+    out_table = os.path.join(outdir, 'InsertSizeMetrics.xls')
+    data.to_csv(out_table, index=True, header=True, sep='\t')
+
+    for i in range(0, data.shape[1], 10):
+        df = data.iloc[:, i: i + 10]
+        df.index.name = 'CATEGORY'
+        df.reset_index(inplace=True)
+        header_values = ['<b>' + '<br>'.join(textwrap.wrap(x, width=12)) + '</b>' for x in list(df.columns)]
+        trace = go.Table(
+            columnwidth=[max(len(str(x)) for x in df[y]) for y in df.columns],
+            header=dict(values=header_values,
+                        fill=dict(color='#C2D4FF'),
+                        align=['left'] * df.shape[1]),
+            cells=dict(values=[df[x] for x in df.columns],
+                       fill=dict(color='#F5F8FF'),
+                       align=['left'] * df.shape[1]))
+        layout = dict(
+            title='InsertSize Summary',
+            autosize=True,
+            margin=dict(t=25, l=10, r=10, b=10),
+            showlegend=False,
+        )
+        fig = go.Figure(data=[trace], layout=layout)
+        out_name = os.path.join(outdir, 'InsertSizeMetrics_{}.html'.format(i + 1))
+        plt(fig, filename=out_name)
+    return data
+
+
+def CollectRnaSeqMetrics(files, outdir=os.getcwd()):
+    if type(files) == str:
+        files = glob(files)
+        if not files:
+            raise ValueError('No target file matched!')
+    data = list()
+    for each in files:
+        if not os.path.exists(each):
+            pass
+        # histogram_line = [x[0] for x in enumerate(open(each)) if x[1].startswith('## HISTOGRAM')][0]
+        sample = os.path.basename(each).split('.', 1)[0]
+        summary = pd.read_table(each, comment='#', header=0, nrows=1)
+        summary.index = [sample]
+        data.append(summary)
+    data = pd.concat(data, axis=0).dropna(axis=1).round(4)
+    data = data.drop(['CORRECT_STRAND_READS', 'INCORRECT_STRAND_READS', 'IGNORED_READS', 'PCT_CORRECT_STRAND_READS'], axis=1)
+    data = data.transpose()
+    out_table = os.path.join(outdir, 'RnaSeqMetrics.xls')
+    data.to_csv(out_table, index=True, header=True, sep='\t')
+
+    for i in range(0, data.shape[1], 10):
+        df = data.iloc[:, i: i + 10]
+        df.index.name = 'CATEGORY'
+        df.reset_index(inplace=True)
+        header_values = ['<b>' + '<br>'.join(textwrap.wrap(x, width=12)) + '</b>' for x in list(df.columns)]
+        trace = go.Table(
+            columnwidth=[max(len(str(x)) for x in df[y]) for y in df.columns],
+            header=dict(values=header_values,
+                        fill=dict(color='#C2D4FF'),
+                        align=['left'] * df.shape[1]),
+            cells=dict(values=[df[x] for x in df.columns],
+                       fill=dict(color='#F5F8FF'),
+                       align=['left'] * df.shape[1]))
+        layout = dict(
+            title='RNA Summary',
+            autosize=True,
+            margin=dict(t=25, l=10, r=10, b=10),
+            showlegend=False,
+        )
+        fig = go.Figure(data=[trace], layout=layout)
+        out_name = os.path.join(outdir, 'RnaSeqMetrics_{}.html'.format(i + 1))
+        plt(fig, filename=out_name)
+    return data
+
+
+def CollectTargetedPcrMetrics(files, outdir=os.getcwd()):
+    if type(files) == str:
+        files = glob(files)
+        if not files:
+            raise ValueError('No target file matched!')
+    data = list()
+    for each in files:
+        if not os.path.exists(each):
+            pass
+        # histogram_line = [x[0] for x in enumerate(open(each)) if x[1].startswith('## HISTOGRAM')][0]
+        sample = os.path.basename(each).split('.', 1)[0]
+        summary = pd.read_table(each, comment='#', header=0, nrows=1)
+        summary.index = [sample]
+        data.append(summary)
+    data = pd.concat(data, axis=0).dropna(axis=1).round(4)
+    data = data.transpose()
+    out_table = os.path.join(outdir, 'TargetedPcrMetrics.xls')
+    data.to_csv(out_table, index=True, header=True, sep='\t')
+
+    for i in range(0, data.shape[1], 10):
+        df = data.iloc[:, i: i + 10]
+        df.index.name = 'CATEGORY'
+        df.reset_index(inplace=True)
+        header_values = ['<b>' + '<br>'.join(textwrap.wrap(x, width=12)) + '</b>' for x in list(df.columns)]
+        trace = go.Table(
+            columnwidth=[max(len(str(x)) for x in df[y]) for y in df.columns],
+            header=dict(values=header_values,
+                        fill=dict(color='#C2D4FF'),
+                        align=['left'] * df.shape[1]),
+            cells=dict(values=[df[x] for x in df.columns],
+                       fill=dict(color='#F5F8FF'),
+                       align=['left'] * df.shape[1]))
+        layout = dict(
+            title='Targeted Alignment Summary',
+            autosize=True,
+            margin=dict(t=25, l=10, r=10, b=10),
+            showlegend=False,
+        )
+        fig = go.Figure(data=[trace], layout=layout)
+        out_name = os.path.join(outdir, 'TargetedPcrMetrics_{}.html'.format(i + 1))
+        plt(fig, filename=out_name)
+    return data
+
+
 if __name__ == '__main__':
     def introduce_command(func):
         import argparse
@@ -500,11 +699,12 @@ if __name__ == '__main__':
         print("total time: {}s".format(time.time() - start))
 
     import sys
-    if sys.argv[1] == 'exp_density':
-        sys.argv.remove('exp_density')
-        introduce_command(exp_density)
-    elif sys.argv[1] == 'exp_pca':
-        sys.argv.remove('exp_pca')
-        introduce_command(exp_pca)
+    sub_cmd = sys.argv[1]
+    sys.argv.remove(sub_cmd)
+    callable_dict = {x: y for x, y in locals().items() if callable(y)}
+    _ = [callable_dict.pop(x) for x in  {'partial', 'OrderedDict', 'glob'}]
+    if sub_cmd in callable_dict:
+        introduce_command(callable_dict[sub_cmd])
     else:
-        pass
+        print('sub-command: {} is not defined'.format(sub_cmd))
+

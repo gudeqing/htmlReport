@@ -205,7 +205,7 @@ def alignment_summary_plot(result_dir, report_dir):
     plotting.chromosome_read_distribution(chromosome_distr, outdir=outdir, top=30)
 
 
-def alignment_summary_slides(report_dir, slide_template="templates/slide.jinja2", reg="*.html"):
+def alignment_summary_slides(report_dir, slide_template="templates/slide.jinja2"):
     step_desc = {
         "Summary": "比对结果统计表",
         "DepthDistribution": "捕获区域的测序深度分布图",
@@ -238,6 +238,41 @@ def alignment_summary_slides(report_dir, slide_template="templates/slide.jinja2"
     return result_dict
 
 
+def mapping_summary_plot(result_dir, report_dir):
+    outdir = os.path.join(report_dir, 'MappingSummary')
+    mkdir(outdir)
+    target_dirs = [
+        'CollectAlignmentSummaryMetrics',
+        'CollectInsertSizeMetrics',
+        'CollectRnaSeqMetrics',
+        'CollectTargetedPcrMetrics'
+    ]
+    for each in target_dirs:
+        files = glob.glob(os.path.join(result_dir, each, '*.Collect*Metrics.xls'))
+        if files:
+            eval('plotting.{}(files, outdir=outdir)'.format(each))
+
+
+def mapping_summary_slides(report_dir, slide_template="templates/slide.jinja2"):
+    step_desc = {
+        "AlignmentSummaryMetrics": "比对结果统计表",
+        "InsertSizeMetrics": "Insert Size 统计表",
+        "RnaSeqMetrics": "比对结果统计表，侧重基因不同区域的统计，比对到rRNA的统计",
+        "TargetedSummaryMetrics": "比对到捕获区域的统计表",
+    }
+    name = 'MappingSummary'
+    result_dict = {name: dict()}
+    #
+    for step, desc in step_desc.items():
+        result_dict[name][step] = slider_report(
+            exp_to_match_images=os.path.join(report_dir, 'MappingSummary', '*Metrics*.html'),
+            description=desc,
+            template=slide_template,
+            name=os.path.join(report_dir, 'htmls', '{}.html'.format(step))
+        )
+    return result_dict
+
+
 def make_report(result_dir):
     report_dir = mkdir('Report')
     index_html_path = os.path.join(report_dir, 'index.html')
@@ -254,8 +289,10 @@ def make_report(result_dir):
     result_dict.update(exp_analysis_slides(report_dir, slide_template=slide_template))
     alignment_summary_plot(result_dir, report_dir)
     result_dict.update(alignment_summary_slides(report_dir, slide_template=slide_template))
+    mapping_summary_plot(result_dir, report_dir)
+    result_dict.update(mapping_summary_slides(report_dir, slide_template))
 
-    # use relative path
+    # use relative path, this is important
     for section in result_dict:
         for each in result_dict[section]:
             # print(section)

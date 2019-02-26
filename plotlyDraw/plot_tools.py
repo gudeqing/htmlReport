@@ -31,6 +31,10 @@ def get_color_pool(n):
 
 
 def gene_body_coverage(files, outdir=os.getcwd()):
+    if type(files) == str:
+        files = glob(files)
+        if not files:
+            raise ValueError('No target file matched!')
     layout = go.Layout(title="geneBodyCoverage")
     all_fig = go.Figure(layout=layout)
     for each in files:
@@ -47,6 +51,10 @@ def gene_body_coverage(files, outdir=os.getcwd()):
 
 
 def fragment_length(files, outdir=os.getcwd(), min_len=50, max_len=600):
+    if type(files) == str:
+        files = glob(files)
+        if not files:
+            raise ValueError('No target file matched!')
     layout = go.Layout(
         title="Fragment length distribution",
         xaxis=dict(title='Fragment length'),
@@ -79,6 +87,10 @@ def inner_distance(files, outdir, min_dist=-250, max_dist=250):
     sameTranscript=Yes,sameExon=No,dist=mRNA
     sameTranscript=Yes,sameExon=Yes,dist=mRNA
     """
+    if type(files) == str:
+        files = glob(files)
+        if not files:
+            raise ValueError('No target file matched!')
     groups = [
         'sameTranscript=No,dist=genomic',
         'sameTranscript=Yes,nonExonic=Yes,dist=genomic',
@@ -116,6 +128,10 @@ def inner_distance(files, outdir, min_dist=-250, max_dist=250):
 
 
 def read_distribution(files, outdir):
+    if type(files) == str:
+        files = glob(files)
+        if not files:
+            raise ValueError('No target file matched!')
     all_data = list()
     for each in files:
         sample = os.path.basename(each).split('.', 1)[0]
@@ -143,6 +159,10 @@ def read_distribution(files, outdir):
 
 
 def read_duplication(pos_dup_files, outdir=os.getcwd(), max_dup=500):
+    if type(pos_dup_files) == str:
+        pos_dup_files = glob(pos_dup_files)
+        if not pos_dup_files:
+            raise ValueError('No target file matched!')
     traces = list()
     for each in pos_dup_files:
         sample = os.path.basename(each).split('.', 1)[0]
@@ -170,6 +190,10 @@ def read_duplication(pos_dup_files, outdir=os.getcwd(), max_dup=500):
 
 
 def exp_saturation(exp_files, outdir=os.getcwd(), outlier_limit=5):
+    if type(exp_files) == str:
+        exp_files = glob(exp_files)
+        if not exp_files:
+            raise ValueError('No target file matched!')
     all_fig = tools.make_subplots(
         rows=2, cols=2,
         subplot_titles=(
@@ -235,7 +259,7 @@ def exp_saturation(exp_files, outdir=os.getcwd(), outlier_limit=5):
     plt(all_fig, filename=out_name)
 
 
-def exp_pca(exp_table, row_sum_cutoff=0.1, exp_cutoff=0.1, cv_cutoff=0.05,
+def exp_pca(exp_table, row_sum_cutoff=0.1, exp_cutoff=0.1, cv_cutoff=0.01,
             explained_ratio=0.95, outdir=os.getcwd(), group_dict=None):
     from sklearn import decomposition, preprocessing
     data = pd.read_table(exp_table, header=0, index_col=0)
@@ -319,8 +343,8 @@ def exp_pca(exp_table, row_sum_cutoff=0.1, exp_cutoff=0.1, cv_cutoff=0.05,
         traces.append(trace)
     layout = dict(
         showlegend=True,
-        width=800,
-        height=600,
+        # width=800,
+        # height=600,
         xaxis=dict(title='PC1({:.2%})'.format(pc_ratio['PC1'])),
         yaxis=dict(title='PC2({:.2%})'.format(pc_ratio['PC2']))
     )

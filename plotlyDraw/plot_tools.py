@@ -722,11 +722,17 @@ if __name__ == '__main__':
         func(**args)
         print("total time: {}s".format(time.time() - start))
 
+
     import sys
+    from pprint import pprint
+    callable_dict = {x: y for x, y in locals().items() if callable(y)}
+    _ = [callable_dict.pop(x) for x in {'partial', 'OrderedDict', 'glob'}]
+    if len(sys.argv) <= 1:
+        pprint("The tool has the following sub-commands: ")
+        pprint(callable_dict.keys())
     sub_cmd = sys.argv[1]
     sys.argv.remove(sub_cmd)
-    callable_dict = {x: y for x, y in locals().items() if callable(y)}
-    _ = [callable_dict.pop(x) for x in  {'partial', 'OrderedDict', 'glob'}]
+
     if sub_cmd in callable_dict:
         introduce_command(callable_dict[sub_cmd])
     else:

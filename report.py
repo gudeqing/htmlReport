@@ -66,8 +66,9 @@ def qc_plot(result_dir, report_dir):
         "ReadDistribution": "read的比对到各个基因区域的比例分布图",
         "InnerDistance": "pair-end read 之间的相对距离，负数表明有测序有overlap",
         "ReadDuplication": "冗余度分析图，正常时左边快速下降，尾部平滑无突起",
-        "TPMSaturation": "基因测序饱和度分析，曲线越快到达最低点表示测序越饱和",
-        "FragmentSize": "pair read 长度分布",
+        "TPMSaturation": "基因测序饱和度分析图，曲线越快到达最低点表示测序越饱和",
+        "FragmentSize": "pair read 长度分布图",
+        "ChrReadDistribution": "read比对到各个染色体或scaffold的统计分布图"
     }
     for qc_name in qc_name_desc:
         outdir = os.path.join(report_dir, qc_name)
@@ -108,10 +109,16 @@ def qc_plot(result_dir, report_dir):
                 if stat_files:
                     mkdir(outdir)
                     plotting.fragment_length(stat_files, outdir=outdir, min_len=50, max_len=600)
+            elif qc_name == 'ChrReadDistribution':
+                reg = '*.chromosome.alignment.stat.txt'
+                stat_files = glob.glob(os.path.join(result_dir, qc_name, reg))
+                if stat_files:
+                    mkdir(outdir)
+                    plotting.chromosome_read_distribution(stat_files, outdir=outdir, min_len=50, top=30)
     return report_dir
 
 
-def exp_analysis_plot(result_dir, report_dir, level='gene'):
+def exp_analysis_plot(result_dir, report_dir, level='gene', group_file=None):
     if level == 'gene':
         exp_table = os.path.join(result_dir, 'MergeQuantGene', 'gene.isoform.TMM.EXPR.matrix')
     else:
@@ -121,7 +128,7 @@ def exp_analysis_plot(result_dir, report_dir, level='gene'):
     if os.path.exists(exp_table):
         mkdir(outdir)
         plotting.exp_pca(exp_table, row_sum_cutoff=0.1, exp_cutoff=0.1, cv_cutoff=0.05,
-                         explained_ratio=0.95, outdir=outdir, group_dict=None)
+                         explained_ratio=0.95, outdir=outdir, group_dict=group_file)
         plotting.exp_density(exp_table, outdir=outdir, row_sum_cutoff=0.1, exp_cutoff=0.1)
         cluster = importlib.import_module('.clusterheatmap', package='plotlyDraw')
         cluster.ClusterHeatMap(
@@ -144,6 +151,7 @@ def qc_slides(report_dir, slide_template="templates/slide.jinja2", reg="*.html")
         "ReadDuplication": "冗余度分析图，正常时左边快速下降，尾部平滑无突起",
         "TPMSaturation": "基因测序饱和度分析，曲线越快到达最低点表示测序越饱和",
         "FragmentSize": "pair read 长度分布",
+        "ChrReadDistribution": "read比对到各个染色体或scaffold的统计分布图"
     }
     qc_result = (os.path.join(report_dir, x) for x in qc_name_desc)
     reg_list = (os.path.join(x, reg) for x in qc_result)
@@ -202,7 +210,8 @@ def alignment_summary_plot(result_dir, report_dir):
     plotting.target_region_depth_distribution(depth_distr, outdir=outdir)
     # chromosome_read_distribution
     chromosome_distr = glob.glob(os.path.join(result_dir, 'AlignmentSummary', '*.chromosome.alignment.stat.txt'))
-    plotting.chromosome_read_distribution(chromosome_distr, outdir=outdir, top=30)
+    if chromosome_distr:
+        plotting.chromosome_read_distribution(chromosome_distr, outdir=outdir, top=30)
 
 
 def alignment_summary_slides(report_dir, slide_template="templates/slide.jinja2"):
@@ -273,7 +282,7 @@ def mapping_summary_slides(report_dir, slide_template="templates/slide.jinja2"):
     return result_dict
 
 
-def make_report(result_dir):
+def make_report(result_dir, group_file=None):
     report_dir = mkdir('Report')
     index_html_path = os.path.join(report_dir, 'index.html')
     html_utils_dir = os.path.dirname(__file__)
@@ -281,14 +290,16 @@ def make_report(result_dir):
     slide_template = os.path.join(html_utils_dir, 'templates', 'slide.jinja2')
     index_template = os.path.join(html_utils_dir, 'templates', 'index.jinja2')
 
-    qc_plot(result_dir, report_dir)
-    exp_analysis_plot(result_dir, report_dir, level='gene')
-
     result_dict = dict()
+    qc_plot(result_dir, report_dir)
     result_dict.update(qc_slides(report_dir, slide_template=slide_template, reg='*.html'))
+
+    exp_analysis_plot(result_dir, report_dir, level='gene', group_file=group_file)
     result_dict.update(exp_analysis_slides(report_dir, slide_template=slide_template))
-    alignment_summary_plot(result_dir, report_dir)
-    result_dict.update(alignment_summary_slides(report_dir, slide_template=slide_template))
+
+    # alignment_summary_plot(result_dir, report_dir)
+    # result_dict.update(alignment_summary_slides(report_dir, slide_template=slide_template))
+
     mapping_summary_plot(result_dir, report_dir)
     result_dict.update(mapping_summary_slides(report_dir, slide_template))
 
@@ -306,6 +317,100 @@ def make_report(result_dir):
 
 
 if __name__ == '__main__':
-    import sys
-    make_report(sys.argv[1])
+    class Func2Command(object):
+        def __init__(self, callable_dict):
+            self.call(callable_dict)
+
+        @staticmethod
+        def introduce_command(func):
+            import argparse
+            import inspect
+            import json
+            import time
+            if isinstance(func, type):
+                description = func.__init__.__doc__
+            else:
+                description = func.__doc__
+            if description:
+                _ = [print(x.strip()) for x in description.split('\n') if x.strip()]
+                parser = argparse.ArgumentParser(add_help=False)
+            else:
+                parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter, description=description)
+            func_args = inspect.getfullargspec(func)
+            arg_names = func_args.args
+            if not arg_names:
+                func()
+                return
+            arg_defaults = func_args.defaults
+            if not arg_defaults:
+                arg_defaults = []
+            arg_defaults = ['None']*(len(arg_names) - len(arg_defaults)) + list(arg_defaults)
+            sig = inspect.signature(func)
+            for arg, value in zip(arg_names, arg_defaults):
+                arg_type = sig.parameters[arg].annotation
+                if arg == 'self':
+                    continue
+                if value == 'None':
+                    if arg_type in [list, tuple, set]:
+                        parser.add_argument('-' + arg, nargs='+', required=True, metavar=arg)
+                    elif arg_type in [int, str, float]:
+                        parser.add_argument('-' + arg, type=arg_type, required=True, metavar=arg)
+                    else:
+                        parser.add_argument('-'+arg, required=True, metavar=arg)
+                elif type(value) == bool:
+                    if value:
+                        parser.add_argument('--'+arg, action="store_false", help='default: True')
+                    else:
+                        parser.add_argument('--'+arg, action="store_true", help='default: False')
+                elif value is None:
+                    parser.add_argument('-' + arg, default=value, metavar='Default:' + str(value), )
+                else:
+                    if arg_type in [list, tuple, set] or (type(value) in [list, tuple, set]):
+                        default_value = ' '.join(str(x) for x in value)
+                        if type(value) in [list, tuple]:
+                            one_value = value[0]
+                        else:
+                            one_value = value.pop()
+                        parser.add_argument('-' + arg, default=value, nargs='+', type=type(one_value),
+                                            metavar='Default:'+default_value, )
+                    else:
+                        parser.add_argument('-' + arg, default=value, type=type(value),
+                                            metavar='Default:' + str(value), )
+            if func_args.varargs is not None:
+                print("warning: *varargs is not supported, and will be neglected! ")
+            if func_args.varkw is not None:
+                print("warning: **keywords args is not supported, and will be neglected! ")
+            args = parser.parse_args().__dict__
+            try:
+                with open("Argument_detail.json", 'w') as f:
+                    json.dump(args, f, indent=2, sort_keys=True)
+            except IOError:
+                print('Current Directory is not writable, thus argument log is not written !')
+            start = time.time()
+            func(**args)
+            print("total time: {}s".format(time.time() - start))
+
+        def call(self, callable_dict):
+            import sys
+            excludes = ['introduce_command', 'Func2Command']
+            _ = [callable_dict.pop(x) for x in excludes if x in callable_dict]
+            if len(callable_dict) >= 2:
+                if len(sys.argv) <= 1:
+                    print("The tool has the following sub-commands: ")
+                    _ = [print(x) for x in callable_dict]
+                    return
+                sub_cmd = sys.argv[1]
+                sys.argv.remove(sub_cmd)
+
+                if sub_cmd in callable_dict:
+                    self.introduce_command(callable_dict[sub_cmd])
+                else:
+                    print('sub-command: {} is not defined'.format(sub_cmd))
+            elif len(callable_dict) == 1:
+                self.introduce_command(callable_dict.pop(list(callable_dict.keys())[0]))
+
+    callable_dict = {x: y for x, y in locals().items() if callable(y)}
+    _ = [callable_dict.pop(x) for x in {'Func2Command'} if x in callable_dict]
+    Func2Command(callable_dict)
+
 

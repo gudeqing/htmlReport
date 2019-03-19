@@ -97,7 +97,7 @@ def get_marker_pool(n):
     return sorted([x for x in maker_pool if type(x) == int])[: n]
 
 
-def draw(fig: go.Figure, prefix='', outdir=os.getcwd(), formats=('html', 'png'), height=400, width=500, scale=3):
+def draw(fig: go.Figure, prefix='', outdir=os.getcwd(), formats=('html', 'pdf'), height:int=None, width:int=None, scale=3):
     for format in formats:
         out_name = os.path.join(outdir, '{}.{}'.format(prefix, format))
         if format == 'html':
@@ -108,7 +108,7 @@ def draw(fig: go.Figure, prefix='', outdir=os.getcwd(), formats=('html', 'png'),
             pio.write_image(fig, format=format, file=out_name, height=height, width=width, scale=scale)
 
 
-def gene_body_coverage(files:list, outdir=os.getcwd(), formats=('html', 'png'), height=400, width=500, scale=3):
+def gene_body_coverage(files:list, outdir=os.getcwd(), formats=('html', 'pdf'), height:int=None, width:int=None, scale=3):
     layout = go.Layout(title="geneBodyCoverage")
     all_fig = go.Figure(layout=layout)
     for each in files:
@@ -125,7 +125,7 @@ def gene_body_coverage(files:list, outdir=os.getcwd(), formats=('html', 'png'), 
 
 
 def fragment_length(files:list, outdir=os.getcwd(), min_len=50, max_len=600,
-                    formats=('html', 'png'), height=400, width=500, scale=3):
+                    formats=('html', 'pdf'), height:int=None, width:int=None, scale=3):
     layout = go.Layout(
         title="Fragment length distribution",
         xaxis=dict(title='Fragment length'),
@@ -150,7 +150,7 @@ def fragment_length(files:list, outdir=os.getcwd(), min_len=50, max_len=600,
 
 
 def inner_distance(files:list, outdir, min_dist=-250, max_dist=250,
-                   formats=('html', 'png'), height=400, width=500, scale=3):
+                   formats=('html', 'pdf'), height:int=None, width:int=None, scale=3):
     """
     抽样1000000得到的统计结果，第三列的值可能是：
     readPairOverlap
@@ -195,7 +195,7 @@ def inner_distance(files:list, outdir, min_dist=-250, max_dist=250,
     draw(all_fig, prefix=prefix, outdir=outdir, formats=formats, height=height, width=width, scale=scale)
 
 
-def read_distribution(files:list, outdir, formats=('html', 'png'), height=400, width=500, scale=3):
+def read_distribution(files:list, outdir, formats=('html', 'pdf'), height:int=None, width:int=None, scale=3):
     all_data = list()
     for each in files:
         sample = os.path.basename(each).split('.', 1)[0]
@@ -223,7 +223,7 @@ def read_distribution(files:list, outdir, formats=('html', 'png'), height=400, w
 
 
 def read_duplication(pos_dup_files:list, outdir=os.getcwd(), max_dup=500,
-                     formats=('html', 'png'), height=400, width=500, scale=3):
+                     formats=('html', 'pdf'), height:int=None, width:int=None, scale=3):
     traces = list()
     for each in pos_dup_files:
         sample = os.path.basename(each).split('.', 1)[0]
@@ -251,7 +251,7 @@ def read_duplication(pos_dup_files:list, outdir=os.getcwd(), max_dup=500,
 
 
 def exp_saturation(exp_files, outdir=os.getcwd(), outlier_limit=5,
-                   formats=('html', 'png'), height=400, width=500, scale=3):
+                   formats=('html', 'pdf'), height:int=None, width:int=None, scale=3):
     all_fig = tools.make_subplots(
         rows=2, cols=2,
         subplot_titles=(
@@ -319,7 +319,7 @@ def exp_saturation(exp_files, outdir=os.getcwd(), outlier_limit=5,
 
 def exp_pca(exp_table, row_sum_cutoff=0.1, exp_cutoff=0.1, cv_cutoff=0.01,
             explained_ratio=0.95, outdir=os.getcwd(), group_dict=None,
-            formats=('html', 'png'), height=400, width=500, scale=3):
+            formats=('html', 'pdf'), height:int=None, width:int=None, scale=3):
     from sklearn import decomposition, preprocessing
     data = pd.read_table(exp_table, header=0, index_col=0)
     data = data[data.sum(axis=1) >= row_sum_cutoff]
@@ -413,7 +413,7 @@ def exp_pca(exp_table, row_sum_cutoff=0.1, exp_cutoff=0.1, cv_cutoff=0.01,
 
 
 def exp_density(exp_table, outdir=os.getcwd(), row_sum_cutoff=0.1, exp_cutoff=0.1,
-                formats=('html', 'png'), height=400, width=500, scale=3):
+                formats=('html', 'pdf'), height:int=None, width:int=None, scale=3):
 
     def get_density(all_exp_pd):
         """
@@ -471,7 +471,7 @@ def exp_density(exp_table, outdir=os.getcwd(), row_sum_cutoff=0.1, exp_cutoff=0.
     draw(fig, prefix=prefix, outdir=outdir, formats=formats, height=height, width=width, scale=scale)
 
 
-def alignment_summary_table(files:list, outdir=os.getcwd(), formats=('html', 'png'), height=400, width=500, scale=3):
+def alignment_summary_table(files:list, outdir=os.getcwd(), formats=('html', 'pdf'), height:int=None, width:int=None, scale=3):
     summary_dict_list = [json.load(open(x), object_pairs_hook=OrderedDict) for x in files]
     sample_list = [os.path.basename(x).split('.', 1)[0] for x in files]
     df = pd.DataFrame(summary_dict_list, index=sample_list).round(2)
@@ -508,7 +508,7 @@ def alignment_summary_table(files:list, outdir=os.getcwd(), formats=('html', 'pn
     draw(fig, prefix=prefix, outdir=outdir, formats=formats, height=height, width=width, scale=scale)
 
 
-def target_region_depth_distribution(files, outdir=os.getcwd(), formats=('html', 'png'), height=400, width=500, scale=3):
+def target_region_depth_distribution(files, outdir=os.getcwd(), formats=('html', 'pdf'), height:int=None, width:int=None, scale=3):
     data_dict = [json.load(open(x), object_pairs_hook=OrderedDict) for x in files]
     sample_list = [os.path.basename(x).split('.', 1)[0] for x in files]
     for distr_dict, sample in zip(data_dict, sample_list):
@@ -525,7 +525,7 @@ def target_region_depth_distribution(files, outdir=os.getcwd(), formats=('html',
         draw(fig, prefix=prefix, outdir=outdir, formats=formats, height=height, width=width, scale=scale)
 
 
-def chromosome_read_distribution(files, outdir=os.getcwd(), top=30, formats=('html', 'png'), height=400, width=500, scale=3):
+def chromosome_read_distribution(files, outdir=os.getcwd(), top=30, formats=('html', 'pdf'), height:int=None, width:int=None, scale=3):
     all_data = list()
     samples = list()
     for each in files:
@@ -563,7 +563,7 @@ def chromosome_read_distribution(files, outdir=os.getcwd(), top=30, formats=('ht
     draw(fig, prefix=prefix, outdir=outdir, formats=formats, height=height, width=width, scale=scale)
 
 
-def CollectAlignmentSummaryMetrics(files, outdir=os.getcwd(), formats=('html', 'png'), height=400, width=500, scale=3):
+def CollectAlignmentSummaryMetrics(files, outdir=os.getcwd(), formats=('html', 'pdf'), height:int=None, width:int=None, scale=3):
     if type(files) == str:
         files = glob(files)
     data = list()
@@ -605,7 +605,7 @@ def CollectAlignmentSummaryMetrics(files, outdir=os.getcwd(), formats=('html', '
     return data
 
 
-def CollectInsertSizeMetrics(files, outdir=os.getcwd(), formats=('html', 'png'), height=400, width=500, scale=3):
+def CollectInsertSizeMetrics(files, outdir=os.getcwd(), formats=('html', 'pdf'), height:int=None, width:int=None, scale=3):
     if type(files) == str:
         files = glob(files)
     data = list()
@@ -647,7 +647,7 @@ def CollectInsertSizeMetrics(files, outdir=os.getcwd(), formats=('html', 'png'),
     return data
 
 
-def CollectRnaSeqMetrics(files, outdir=os.getcwd(), formats=('html', 'png'), height=400, width=500, scale=3):
+def CollectRnaSeqMetrics(files, outdir=os.getcwd(), formats=('html', 'pdf'), height:int=None, width:int=None, scale=3):
     if type(files) == str:
         files = glob(files)
         if not files:
@@ -692,7 +692,7 @@ def CollectRnaSeqMetrics(files, outdir=os.getcwd(), formats=('html', 'png'), hei
     return data
 
 
-def CollectTargetedPcrMetrics(files, outdir=os.getcwd(), formats=('html', 'png'), height=400, width=500, scale=3):
+def CollectTargetedPcrMetrics(files, outdir=os.getcwd(), formats=('html', 'pdf'), height:int=None, width:int=None, scale=3):
     if type(files) == str:
         files = glob(files)
         if not files:

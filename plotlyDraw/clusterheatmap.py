@@ -20,12 +20,12 @@ class ClusterHeatMap(object):
                  only_gene_dendrogram=False,
                  do_correlation_cluster=False, corr_method='pearson',
                  sample_cluster_num=1, gene_cluster_num=1,
-                 sample_group=None, log_base=2, zscore_before_cluster=False,
+                 sample_group=None, log_base=2, log_additive=1.0, zscore_before_cluster=False,
                  lower_exp_cutoff=0.1, pass_lower_exp_num=None,
                  row_sum_cutoff=0.5, cv_cutoff=0.,
                  width=1000, height=800,
                  gene_label_size=6, sample_label_size=10, sample_label_angle=45,
-                 color_scale='YlGnBu', preprocess_data_func=None,
+                 color_scale='YlGnBu', preprocess_data_func=None, transpose_data=False,
                  left_dendrogram_width=0.15, top_dendrogram_height=0.15):
         """
         cluster / correlation cluster for gene expression
@@ -49,6 +49,7 @@ class ClusterHeatMap(object):
         :param sample_group: sample group dict, {'sample_name': 'group_name', ...},
             or a file with two columns [sample_name, group_name]
         :param log_base: transform data using log, value could be one of {2, 10, None}
+        :param log_additive: a small value added before doing log transformation for data
         :param zscore_before_cluster: bool indicates if to do zscore normalization, default: False.
             No effect if "do_correlation_cluster" is True
         :param lower_exp_cutoff: gene expression lower cutoff, combined with pass_lower_exp_num
@@ -63,6 +64,7 @@ class ClusterHeatMap(object):
             'Greens', 'Greys', 'Hot', 'Jet', 'Picnic', 'Portland',
             'Rainbow', 'RdBu', 'Reds', 'Viridis', 'YlGnBu', 'YlOrRd']
         :param preprocess_data_func: function provided for data filtering and transformation. Default None
+        :param transpose_data: transpose raw data before future analysis
         :param left_dendrogram_width: left/sample dendrogram width, default 0.15, range(0, 1)
         :param top_dendrogram_height: top/gene dendrogram height, default 0.15, range(0, 1)
         """
@@ -74,6 +76,7 @@ class ClusterHeatMap(object):
         self.scn = sample_cluster_num
         self.gcn = gene_cluster_num
         self.group_dict = sample_group
+        self.transpose_data = transpose_data
         if isinstance(sample_group, str):
             if not os.path.exists(sample_group):
                 raise Exception('sample group file is not existed')
@@ -95,6 +98,7 @@ class ClusterHeatMap(object):
         self.width = width
         self.colorscale = color_scale
         self.logbase = log_base
+        self.log_additive = log_additive
         self.lower_exp_cutoff = lower_exp_cutoff
         self.pass_lower_exp_num = int(pass_lower_exp_num) if pass_lower_exp_num is not None else None
         self.row_sum_cutoff = row_sum_cutoff
@@ -155,6 +159,9 @@ class ClusterHeatMap(object):
 
     def process_data(self):
         exp_pd = pd.read_table(self.data_file, header=0, index_col=0)
+        if self.transpose_data:
+            exp_pd = exp_pd.transpose()
+        # exp_pd = exp_pd.applymap(lambda x: x if x <=8 else 8)
         if exp_pd.shape[0] <= 1 or exp_pd.shape[1] <= 1:
             raise Exception("Data is not enough for analysis !")
         exp_pd = exp_pd[exp_pd.sum(axis=1) > self.row_sum_cutoff]
@@ -166,7 +173,7 @@ class ClusterHeatMap(object):
         if self.logbase == 2:
             exp_pd = np.log2(exp_pd+1)
         elif self.logbase == 10:
-            exp_pd = np.log10(exp_pd+1)
+            exp_pd = np.log10(exp_pd+self.log_additive)
         elif not self.logbase or self.logbase == 1:
             pass
         else:

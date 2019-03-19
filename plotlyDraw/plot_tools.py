@@ -8,8 +8,8 @@ import json
 import textwrap
 from plotly import tools
 import plotly.graph_objs as go
-import plotly.figure_factory as ff
 from plotly.offline import plot as plt
+import plotly.io as pio
 plt = partial(plt, auto_open=False)
 
 
@@ -97,11 +97,18 @@ def get_marker_pool(n):
     return sorted([x for x in maker_pool if type(x) == int])[: n]
 
 
-def gene_body_coverage(files, outdir=os.getcwd()):
-    if type(files) == str:
-        files = glob(files)
-        if not files:
-            raise ValueError('No target file matched!')
+def draw(fig: go.Figure, prefix='', outdir=os.getcwd(), formats=('html', 'png'), height=400, width=500, scale=3):
+    for format in formats:
+        out_name = os.path.join(outdir, '{}.{}'.format(prefix, format))
+        if format == 'html':
+            plt(fig, filename=out_name)
+        else:
+            if format in ['svg', 'pdf']:
+                scale = 1
+            pio.write_image(fig, format=format, file=out_name, height=height, width=width, scale=scale)
+
+
+def gene_body_coverage(files:list, outdir=os.getcwd(), formats=('html', 'png'), height=400, width=500, scale=3):
     layout = go.Layout(title="geneBodyCoverage")
     all_fig = go.Figure(layout=layout)
     for each in files:
@@ -111,17 +118,14 @@ def gene_body_coverage(files, outdir=os.getcwd()):
         normalize_y = data.iloc[1, :]/data.iloc[1, :].max()
         fig.add_scatter(x=data.iloc[0, :], y=normalize_y, name=sample)
         all_fig.add_scatter(x=data.iloc[0, :], y=normalize_y, name=sample)
-        out_name = os.path.join(outdir, '{}.geneBodyCoverage.html'.format(sample))
-        plt(fig, filename=out_name)
-    out_name = os.path.join(outdir, 'samples.geneBodyCoverage.html')
-    plt(all_fig, filename=out_name)
+        prefix = '{}.geneBodyCoverage'.format(sample)
+        draw(fig, prefix=prefix, outdir=outdir, formats=formats, height=height, width=width, scale=scale)
+    prefix = '{}.geneBodyCoverage'.format('samples')
+    draw(all_fig, prefix=prefix, outdir=outdir, formats=formats, height=height, width=width, scale=scale)
 
 
-def fragment_length(files, outdir=os.getcwd(), min_len=50, max_len=600):
-    if type(files) == str:
-        files = glob(files)
-        if not files:
-            raise ValueError('No target file matched!')
+def fragment_length(files:list, outdir=os.getcwd(), min_len=50, max_len=600,
+                    formats=('html', 'png'), height=400, width=500, scale=3):
     layout = go.Layout(
         title="Fragment length distribution",
         xaxis=dict(title='Fragment length'),
@@ -139,13 +143,14 @@ def fragment_length(files, outdir=os.getcwd(), min_len=50, max_len=600):
         ))
         fig.add_histogram(x=data["frag_median"], histnorm='probability', name=sample)
         all_fig.add_histogram(x=data["frag_median"], histnorm='probability', name=sample)
-        out_name = os.path.join(outdir, "{}.fragmentLengthDistribution.html".format(sample))
-        plt(fig, filename=out_name)
-    out_name = os.path.join(outdir, "samples.fragmentLengthDistribution.html")
-    plt(all_fig, filename=out_name)
+        prefix = "{}.fragmentLengthDistribution".format(sample)
+        draw(fig, prefix=prefix, outdir=outdir, formats=formats, height=height, width=width, scale=scale)
+    prefix = '{}.fragmentLengthDistribution'.format('samples')
+    draw(all_fig, prefix=prefix, outdir=outdir, formats=formats, height=height, width=width, scale=scale)
 
 
-def inner_distance(files, outdir, min_dist=-250, max_dist=250):
+def inner_distance(files:list, outdir, min_dist=-250, max_dist=250,
+                   formats=('html', 'png'), height=400, width=500, scale=3):
     """
     抽样1000000得到的统计结果，第三列的值可能是：
     readPairOverlap
@@ -154,10 +159,6 @@ def inner_distance(files, outdir, min_dist=-250, max_dist=250):
     sameTranscript=Yes,sameExon=No,dist=mRNA
     sameTranscript=Yes,sameExon=Yes,dist=mRNA
     """
-    if type(files) == str:
-        files = glob(files)
-        if not files:
-            raise ValueError('No target file matched!')
     groups = [
         'sameTranscript=No,dist=genomic',
         'sameTranscript=Yes,nonExonic=Yes,dist=genomic',
@@ -188,17 +189,13 @@ def inner_distance(files, outdir, min_dist=-250, max_dist=250):
             name = "{}({:.2%})".format(g, percents[g])
             fig.add_histogram(x=target, name=name)
         all_fig.add_histogram(x=data[1][data[2] != "sameTranscript=No,dist=genomic"], histnorm='probability', name=sample)
-        out_name = os.path.join(outdir, "{}.InnerDistanceDistribution.html".format(sample))
-        plt(fig, filename=out_name)
-    html_file = os.path.join(outdir, 'samples.InnerDistanceDistribution.html')
-    plt(all_fig, filename=html_file)
+        prefix = "{}.InnerDistanceDistribution".format(sample)
+        draw(fig, prefix=prefix, outdir=outdir, formats=formats, height=height, width=width, scale=scale)
+    prefix = "{}.InnerDistanceDistribution".format('samples')
+    draw(all_fig, prefix=prefix, outdir=outdir, formats=formats, height=height, width=width, scale=scale)
 
 
-def read_distribution(files, outdir):
-    if type(files) == str:
-        files = glob(files)
-        if not files:
-            raise ValueError('No target file matched!')
+def read_distribution(files:list, outdir, formats=('html', 'png'), height=400, width=500, scale=3):
     all_data = list()
     for each in files:
         sample = os.path.basename(each).split('.', 1)[0]
@@ -210,8 +207,8 @@ def read_distribution(files, outdir):
             title='{}'.format(sample),
         ))
         fig.add_pie(labels=data.index, values=data)
-        out_name = os.path.join(outdir, "{}.ReadDistribution.html".format(sample))
-        plt(fig, filename=out_name)
+        prefix = "{}.ReadDistribution".format(sample)
+        draw(fig, prefix=prefix, outdir=outdir, formats=formats, height=height, width=width, scale=scale)
     df = pd.concat(all_data, axis=1).T
     # print(df.head())
     data = [go.Bar(x=df.index, y=df[x], name=x) for x in df.columns]
@@ -221,15 +218,12 @@ def read_distribution(files, outdir):
         barmode='stack'
     )
     fig = go.Figure(data=data, layout=layout)
-    html_file = os.path.join(outdir, 'samples.ReadDistribution.html')
-    plt(fig, filename=html_file)
+    prefix = "{}.ReadDistribution".format('samples')
+    draw(fig, prefix=prefix, outdir=outdir, formats=formats, height=height, width=width, scale=scale)
 
 
-def read_duplication(pos_dup_files, outdir=os.getcwd(), max_dup=500):
-    if type(pos_dup_files) == str:
-        pos_dup_files = glob(pos_dup_files)
-        if not pos_dup_files:
-            raise ValueError('No target file matched!')
+def read_duplication(pos_dup_files:list, outdir=os.getcwd(), max_dup=500,
+                     formats=('html', 'png'), height=400, width=500, scale=3):
     traces = list()
     for each in pos_dup_files:
         sample = os.path.basename(each).split('.', 1)[0]
@@ -243,8 +237,8 @@ def read_duplication(pos_dup_files, outdir=os.getcwd(), max_dup=500):
             yaxis=dict(title='UniqReadNumber', type='log'),
         )
         fig = go.Figure([trace], layout=layout)
-        out_name = os.path.join(outdir, "{}.ReadDuplication.html".format(sample))
-        plt(fig, filename=out_name)
+        prefix = "{}.ReadDuplication".format(sample)
+        draw(fig, prefix=prefix, outdir=outdir, formats=formats, height=height, width=width, scale=scale)
 
     layout = go.Layout(
         title="Read duplication",
@@ -252,15 +246,12 @@ def read_duplication(pos_dup_files, outdir=os.getcwd(), max_dup=500):
         yaxis=dict(title='UniqReadNumber', type='log'),
     )
     fig = go.Figure(traces, layout=layout)
-    out_name = os.path.join(outdir, "samples.ReadDuplication.html")
-    plt(fig, filename=out_name)
+    prefix = "{}.ReadDuplication".format('samples')
+    draw(fig, prefix=prefix, outdir=outdir, formats=formats, height=height, width=width, scale=scale)
 
 
-def exp_saturation(exp_files, outdir=os.getcwd(), outlier_limit=5):
-    if type(exp_files) == str:
-        exp_files = glob(exp_files)
-        if not exp_files:
-            raise ValueError('No target file matched!')
+def exp_saturation(exp_files, outdir=os.getcwd(), outlier_limit=5,
+                   formats=('html', 'png'), height=400, width=500, scale=3):
     all_fig = tools.make_subplots(
         rows=2, cols=2,
         subplot_titles=(
@@ -318,16 +309,17 @@ def exp_saturation(exp_files, outdir=os.getcwd(), outlier_limit=5):
                 line2 = go.Scatter(x=each.columns, y=each.describe().loc['50%', :], mode='lines',
                                    legendgroup=sample, name=sample, line=dict(color=sample_color))
             all_fig.append_trace(line2, x, y)
-        out_name = os.path.join(outdir, "{}.TPM.Saturation.html".format(sample))
-        plt(fig, filename=out_name)
+        prefix = "{}.TPM.Saturation".format(sample)
+        draw(fig, prefix=prefix, outdir=outdir, formats=formats, height=height, width=width, scale=scale)
 
     # plot all sample together
-    out_name = os.path.join(outdir, "samples.TPM.Saturation.html")
-    plt(all_fig, filename=out_name)
+    prefix = "{}.TPM.Saturation".format('samples')
+    draw(all_fig, prefix=prefix, outdir=outdir, formats=formats, height=height, width=width, scale=scale)
 
 
 def exp_pca(exp_table, row_sum_cutoff=0.1, exp_cutoff=0.1, cv_cutoff=0.01,
-            explained_ratio=0.95, outdir=os.getcwd(), group_dict=None):
+            explained_ratio=0.95, outdir=os.getcwd(), group_dict=None,
+            formats=('html', 'png'), height=400, width=500, scale=3):
     from sklearn import decomposition, preprocessing
     data = pd.read_table(exp_table, header=0, index_col=0)
     data = data[data.sum(axis=1) >= row_sum_cutoff]
@@ -416,11 +408,12 @@ def exp_pca(exp_table, row_sum_cutoff=0.1, exp_cutoff=0.1, cv_cutoff=0.01,
         yaxis=dict(title='PC2({:.2%})'.format(pc_ratio['PC2']))
     )
     fig = go.Figure(traces, layout=layout)
-    out_name = os.path.join(outdir, 'PC1_PC2.html')
-    plt(fig, filename=out_name)
+    prefix = "PC1_PC2"
+    draw(fig, prefix=prefix, outdir=outdir, formats=formats, height=height, width=width, scale=scale)
 
 
-def exp_density(exp_table, outdir=os.getcwd(), row_sum_cutoff=0.1, exp_cutoff=0.1):
+def exp_density(exp_table, outdir=os.getcwd(), row_sum_cutoff=0.1, exp_cutoff=0.1,
+                formats=('html', 'png'), height=400, width=500, scale=3):
 
     def get_density(all_exp_pd):
         """
@@ -474,17 +467,11 @@ def exp_density(exp_table, outdir=os.getcwd(), row_sum_cutoff=0.1, exp_cutoff=0.
         yaxis=dict(title='Density', )
     )
     fig = go.Figure(data=traces, layout=layout)
-    out_name = os.path.join(outdir, 'Expression.density.html')
-    plt(fig, filename=out_name)
-    return out_name
+    prefix = "Expression.density"
+    draw(fig, prefix=prefix, outdir=outdir, formats=formats, height=height, width=width, scale=scale)
 
 
-def alignment_summary_table(files, outdir=os.getcwd()):
-    if type(files) == str:
-        files = glob(files)
-        if not files:
-            raise ValueError('No target file matched!')
-    #
+def alignment_summary_table(files:list, outdir=os.getcwd(), formats=('html', 'png'), height=400, width=500, scale=3):
     summary_dict_list = [json.load(open(x), object_pairs_hook=OrderedDict) for x in files]
     sample_list = [os.path.basename(x).split('.', 1)[0] for x in files]
     df = pd.DataFrame(summary_dict_list, index=sample_list).round(2)
@@ -517,11 +504,11 @@ def alignment_summary_table(files, outdir=os.getcwd()):
         showlegend=False,
     )
     fig = go.Figure(data=[trace], layout=layout)
-    out_name = os.path.join(outdir, 'AlignmentSummaryTable.html')
-    plt(fig, filename=out_name)
+    prefix = "AlignmentSummaryTable"
+    draw(fig, prefix=prefix, outdir=outdir, formats=formats, height=height, width=width, scale=scale)
 
 
-def target_region_depth_distribution(files, outdir=os.getcwd()):
+def target_region_depth_distribution(files, outdir=os.getcwd(), formats=('html', 'png'), height=400, width=500, scale=3):
     data_dict = [json.load(open(x), object_pairs_hook=OrderedDict) for x in files]
     sample_list = [os.path.basename(x).split('.', 1)[0] for x in files]
     for distr_dict, sample in zip(data_dict, sample_list):
@@ -534,11 +521,11 @@ def target_region_depth_distribution(files, outdir=os.getcwd()):
         norm_y = [x/total for x in distr_dict.values()]
         trace = go.Bar(x=list(distr_dict.keys()), y=norm_y, )
         fig = go.Figure(data=[trace], layout=layout)
-        out_name = os.path.join(outdir, '{}.baseDepthDistribution.html'.format(sample))
-        plt(fig, filename=out_name)
+        prefix = '{}.baseDepthDistribution'.format(sample)
+        draw(fig, prefix=prefix, outdir=outdir, formats=formats, height=height, width=width, scale=scale)
 
 
-def chromosome_read_distribution(files, outdir=os.getcwd(), top=30):
+def chromosome_read_distribution(files, outdir=os.getcwd(), top=30, formats=('html', 'png'), height=400, width=500, scale=3):
     all_data = list()
     samples = list()
     for each in files:
@@ -553,8 +540,8 @@ def chromosome_read_distribution(files, outdir=os.getcwd(), top=30):
             yaxis=dict(title='Mapped read number')
         )
         fig = go.Figure(data=[trace], layout=layout)
-        out_name = os.path.join(outdir, '{}.ChromosomeReadDistribution.html'.format(sample))
-        plt(fig, filename=out_name)
+        prefix = '{}.ChromosomeReadDistribution'.format(sample)
+        draw(fig, prefix=prefix, outdir=outdir, formats=formats, height=height, width=width, scale=scale)
         all_data.append(data[2]/total)
         samples.append(sample)
     # overall
@@ -572,11 +559,11 @@ def chromosome_read_distribution(files, outdir=os.getcwd(), top=30):
         barmode='stack'
     )
     fig = go.Figure(data=traces, layout=layout)
-    out_name = os.path.join(outdir, 'samples.ChromosomeReadDistribution.html')
-    plt(fig, filename=out_name)
+    prefix = '{}.ChromosomeReadDistribution'.format('samples')
+    draw(fig, prefix=prefix, outdir=outdir, formats=formats, height=height, width=width, scale=scale)
 
 
-def CollectAlignmentSummaryMetrics(files, outdir=os.getcwd()):
+def CollectAlignmentSummaryMetrics(files, outdir=os.getcwd(), formats=('html', 'png'), height=400, width=500, scale=3):
     if type(files) == str:
         files = glob(files)
     data = list()
@@ -613,12 +600,12 @@ def CollectAlignmentSummaryMetrics(files, outdir=os.getcwd()):
             showlegend=False,
         )
         fig = go.Figure(data=[trace], layout=layout)
-        out_name = os.path.join(outdir, 'AlignmentSummaryMetrics_{}.html'.format(i+1))
-        plt(fig, filename=out_name)
+        prefix = 'AlignmentSummaryMetrics_{}'.format(i+1)
+        draw(fig, prefix=prefix, outdir=outdir, formats=formats, height=height, width=width, scale=scale)
     return data
 
 
-def CollectInsertSizeMetrics(files, outdir=os.getcwd()):
+def CollectInsertSizeMetrics(files, outdir=os.getcwd(), formats=('html', 'png'), height=400, width=500, scale=3):
     if type(files) == str:
         files = glob(files)
     data = list()
@@ -655,12 +642,12 @@ def CollectInsertSizeMetrics(files, outdir=os.getcwd()):
             showlegend=False,
         )
         fig = go.Figure(data=[trace], layout=layout)
-        out_name = os.path.join(outdir, 'InsertSizeMetrics_{}.html'.format(i + 1))
-        plt(fig, filename=out_name)
+        prefix = 'InsertSizeMetrics_{}'.format(i+1)
+        draw(fig, prefix=prefix, outdir=outdir, formats=formats, height=height, width=width, scale=scale)
     return data
 
 
-def CollectRnaSeqMetrics(files, outdir=os.getcwd()):
+def CollectRnaSeqMetrics(files, outdir=os.getcwd(), formats=('html', 'png'), height=400, width=500, scale=3):
     if type(files) == str:
         files = glob(files)
         if not files:
@@ -700,12 +687,12 @@ def CollectRnaSeqMetrics(files, outdir=os.getcwd()):
             showlegend=False,
         )
         fig = go.Figure(data=[trace], layout=layout)
-        out_name = os.path.join(outdir, 'RnaSeqMetrics_{}.html'.format(i + 1))
-        plt(fig, filename=out_name)
+        prefix = 'RnaSeqMetrics_{}'.format(i + 1)
+        draw(fig, prefix=prefix, outdir=outdir, formats=formats, height=height, width=width, scale=scale)
     return data
 
 
-def CollectTargetedPcrMetrics(files, outdir=os.getcwd()):
+def CollectTargetedPcrMetrics(files, outdir=os.getcwd(), formats=('html', 'png'), height=400, width=500, scale=3):
     if type(files) == str:
         files = glob(files)
         if not files:
@@ -744,64 +731,104 @@ def CollectTargetedPcrMetrics(files, outdir=os.getcwd()):
             showlegend=False,
         )
         fig = go.Figure(data=[trace], layout=layout)
-        out_name = os.path.join(outdir, 'TargetedPcrMetrics_{}.html'.format(i + 1))
-        plt(fig, filename=out_name)
+        prefix = 'TargetedPcrMetrics_{}'.format(i + 1)
+        draw(fig, prefix=prefix, outdir=outdir, formats=formats, height=height, width=width, scale=scale)
     return data
 
 
 if __name__ == '__main__':
-    def introduce_command(func):
-        import argparse
-        import inspect
-        import json
-        import time
-        if isinstance(func, type):
-            description = func.__init__.__doc__
-        else:
-            description = func.__doc__
-        parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
-        func_args = inspect.getfullargspec(func)
-        arg_names = func_args.args
-        arg_defaults = func_args.defaults
-        arg_defaults = ['None']*(len(arg_names) - len(arg_defaults)) + list(arg_defaults)
-        for arg, value in zip(arg_names, arg_defaults):
-            if arg == 'self':
-                continue
-            if value == 'None':
-                parser.add_argument('-'+arg, required=True, metavar=arg)
-            elif type(value) == bool:
-                if value:
-                    parser.add_argument('--'+arg, action="store_false", help='default: True')
-                else:
-                    parser.add_argument('--'+arg, action="store_true", help='default: False')
-            elif value is None:
-                parser.add_argument('-' + arg, default=value, metavar='Default:' + str(value), )
+    class Func2Command(object):
+        def __init__(self, callable_dict):
+            self.call(callable_dict)
+
+        @staticmethod
+        def introduce_command(func):
+            import argparse
+            import inspect
+            import json
+            import time
+            if isinstance(func, type):
+                description = func.__init__.__doc__
             else:
-                parser.add_argument('-' + arg, default=value, type=type(value), metavar='Default:' + str(value), )
-        if func_args.varargs is not None:
-            print("warning: *varargs is not supported, and will be neglected! ")
-        if func_args.varkw is not None:
-            print("warning: **keywords args is not supported, and will be neglected! ")
-        args = parser.parse_args().__dict__
-        with open("Argument_detail.json", 'w') as f:
-            json.dump(args, f, indent=2, sort_keys=True)
-        start = time.time()
-        func(**args)
-        print("total time: {}s".format(time.time() - start))
+                description = func.__doc__
+            if description:
+                _ = [print(x.strip()) for x in description.split('\n') if x.strip()]
+                parser = argparse.ArgumentParser(add_help=False)
+            else:
+                parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter, description=description)
+            func_args = inspect.getfullargspec(func)
+            arg_names = func_args.args
+            if not arg_names:
+                func()
+                return
+            arg_defaults = func_args.defaults
+            if not arg_defaults:
+                arg_defaults = []
+            arg_defaults = ['None']*(len(arg_names) - len(arg_defaults)) + list(arg_defaults)
+            sig = inspect.signature(func)
+            for arg, value in zip(arg_names, arg_defaults):
+                arg_type = sig.parameters[arg].annotation
+                if arg == 'self':
+                    continue
+                if value == 'None':
+                    if arg_type in [list, tuple, set]:
+                        parser.add_argument('-' + arg, nargs='+', required=True, metavar=arg)
+                    elif arg_type in [int, str, float]:
+                        parser.add_argument('-' + arg, type=arg_type, required=True, metavar=arg)
+                    else:
+                        parser.add_argument('-'+arg, required=True, metavar=arg)
+                elif type(value) == bool:
+                    if value:
+                        parser.add_argument('--'+arg, action="store_false", help='default: True')
+                    else:
+                        parser.add_argument('--'+arg, action="store_true", help='default: False')
+                elif value is None:
+                    parser.add_argument('-' + arg, default=value, metavar='Default:' + str(value), )
+                else:
+                    if arg_type in [list, tuple, set] or (type(value) in [list, tuple, set]):
+                        default_value = ' '.join(str(x) for x in value)
+                        if type(value) in [list, tuple]:
+                            one_value = value[0]
+                        else:
+                            one_value = value.pop()
+                        parser.add_argument('-' + arg, default=value, nargs='+', type=type(one_value),
+                                            metavar='Default:'+default_value, )
+                    else:
+                        parser.add_argument('-' + arg, default=value, type=type(value),
+                                            metavar='Default:' + str(value), )
+            if func_args.varargs is not None:
+                print("warning: *varargs is not supported, and will be neglected! ")
+            if func_args.varkw is not None:
+                print("warning: **keywords args is not supported, and will be neglected! ")
+            args = parser.parse_args().__dict__
+            try:
+                with open("Argument_detail.json", 'w') as f:
+                    json.dump(args, f, indent=2, sort_keys=True)
+            except IOError:
+                print('Current Directory is not writable, thus argument log is not written !')
+            start = time.time()
+            func(**args)
+            print("total time: {}s".format(time.time() - start))
 
+        def call(self, callable_dict):
+            import sys
+            excludes = ['introduce_command', 'Func2Command']
+            _ = [callable_dict.pop(x) for x in excludes if x in callable_dict]
+            if len(callable_dict) >= 2:
+                if len(sys.argv) <= 1:
+                    print("The tool has the following sub-commands: ")
+                    _ = [print(x) for x in callable_dict]
+                    return
+                sub_cmd = sys.argv[1]
+                sys.argv.remove(sub_cmd)
 
-    import sys
-    from pprint import pprint
+                if sub_cmd in callable_dict:
+                    self.introduce_command(callable_dict[sub_cmd])
+                else:
+                    print('sub-command: {} is not defined'.format(sub_cmd))
+            elif len(callable_dict) == 1:
+                self.introduce_command(callable_dict.pop(list(callable_dict.keys())[0]))
+
     callable_dict = {x: y for x, y in locals().items() if callable(y)}
-    _ = [callable_dict.pop(x) for x in {'partial', 'OrderedDict', 'glob'}]
-    if len(sys.argv) <= 1:
-        pprint("The tool has the following sub-commands: ")
-        pprint(callable_dict.keys())
-    sub_cmd = sys.argv[1]
-    sys.argv.remove(sub_cmd)
-
-    if sub_cmd in callable_dict:
-        introduce_command(callable_dict[sub_cmd])
-    else:
-        print('sub-command: {} is not defined'.format(sub_cmd))
-
+    _ = [callable_dict.pop(x) for x in {'Func2Command'} if x in callable_dict]
+    Func2Command(callable_dict)

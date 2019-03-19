@@ -48,7 +48,7 @@ class ClusterHeatMap(object):
         :param gene_cluster_num: number of gene cluster to output
         :param sample_group: sample group dict, {'sample_name': 'group_name', ...},
             or a file with two columns [sample_name, group_name]
-        :param log_base: transform data using log, value could be one of {2, 10, None}
+        :param log_base: transform data using log, value could be one of {2, 10, 1, None}, 1 means no log transformation
         :param log_additive: a small value added before doing log transformation for data
         :param zscore_before_cluster: bool indicates if to do zscore normalization, default: False.
             No effect if "do_correlation_cluster" is True
@@ -177,7 +177,7 @@ class ClusterHeatMap(object):
         elif not self.logbase or self.logbase == 1:
             pass
         else:
-            raise Exception('log base must be one of [2, 10, None] ')
+            raise Exception('log base must be one of [2, 10, 1] ')
         out_name = os.path.join(self.outdir, 'cluster.log{}.cv{}.{}outof{}over{}.preprocessed.data'.format(
             self.logbase, self.cv_cutoff, pass_num_cutoff, exp_pd.shape[1], self.lower_exp_cutoff
         ))
@@ -361,7 +361,7 @@ class ClusterHeatMap(object):
                 y=1,
                 yanchor='top',
                 len=0.5,
-                title="log{}(X)".format(self.logbase) if self.logbase else ''
+                title="log{}(X)".format(self.logbase) if self.logbase and self.logbase != 1 else ''
             )
         )
         return [heat_map]

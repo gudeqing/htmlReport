@@ -830,5 +830,6 @@ if __name__ == '__main__':
                 self.introduce_command(callable_dict.pop(list(callable_dict.keys())[0]))
 
     callable_dict = {x: y for x, y in locals().items() if callable(y)}
-    _ = [callable_dict.pop(x) for x in {'Func2Command'} if x in callable_dict]
+    exclude = ['partial', 'OrderedDict', 'glob', 'plt', 'get_color_pool', 'get_marker_pool', 'draw']
+    _ = [callable_dict.pop(x) for x in exclude if x in callable_dict]
     Func2Command(callable_dict)

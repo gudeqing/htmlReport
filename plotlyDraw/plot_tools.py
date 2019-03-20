@@ -222,10 +222,10 @@ def read_distribution(files:list, outdir, formats=('html', 'pdf'), height:int=No
     draw(fig, prefix=prefix, outdir=outdir, formats=formats, height=height, width=width, scale=scale)
 
 
-def read_duplication(pos_dup_files:list, outdir=os.getcwd(), max_dup=500,
+def read_duplication(files:list, outdir=os.getcwd(), max_dup=500,
                      formats=('html', 'pdf'), height:int=None, width:int=None, scale=3):
     traces = list()
-    for each in pos_dup_files:
+    for each in files:
         sample = os.path.basename(each).split('.', 1)[0]
         data = pd.read_table(each, header=0, index_col=None)
         data = data[data.iloc[:, 0] <= max_dup]
@@ -250,7 +250,7 @@ def read_duplication(pos_dup_files:list, outdir=os.getcwd(), max_dup=500,
     draw(fig, prefix=prefix, outdir=outdir, formats=formats, height=height, width=width, scale=scale)
 
 
-def exp_saturation(exp_files, outdir=os.getcwd(), outlier_limit=5,
+def exp_saturation(files, outdir=os.getcwd(), outlier_limit=5,
                    formats=('html', 'pdf'), height:int=None, width:int=None, scale=3):
     all_fig = tools.make_subplots(
         rows=2, cols=2,
@@ -262,8 +262,8 @@ def exp_saturation(exp_files, outdir=os.getcwd(), outlier_limit=5,
         ),
         shared_xaxes=False
     )
-    color_pool = get_color_pool(len(exp_files))
-    for exp_file, sample_color in zip(exp_files, color_pool):
+    color_pool = get_color_pool(len(files))
+    for exp_file, sample_color in zip(files, color_pool):
         sample = os.path.basename(exp_file).split('.', 1)[0]
         data = pd.read_table(exp_file, header=0, index_col=0)
         # plot deviation

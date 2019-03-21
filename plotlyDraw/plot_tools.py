@@ -10,6 +10,7 @@ from plotly import tools
 import plotly.graph_objs as go
 from plotly.offline import plot as plt
 import plotly.io as pio
+from jinja2 import Template
 plt = partial(plt, auto_open=False)
 
 
@@ -108,14 +109,21 @@ def draw(fig: go.Figure, prefix='', outdir=os.getcwd(), formats=('html',), heigh
             pio.write_image(fig, format=format, file=out_name, height=height, width=width, scale=scale)
 
 
-def gene_body_coverage(files:list, outdir=os.getcwd(), formats=('html',), height:int=None, width:int=None, scale=3):
+def gene_body_coverage(files:list, outdir=os.getcwd(), file_from='RSeQC',
+                       formats=('html',), height:int=None, width:int=None, scale=3):
     layout = go.Layout(title="geneBodyCoverage")
     all_fig = go.Figure(layout=layout)
     for each in files:
         sample = os.path.basename(each).split('.', 1)[0]
-        data = pd.read_table(each, header=None, index_col=0)
         fig = go.Figure(layout=go.Layout(title='{}'.format(sample)))
-        normalize_y = data.iloc[1, :]/data.iloc[1, :].max()
+        if file_from == 'RSeQC':
+            data = pd.read_table(each, header=None, index_col=0)
+            normalize_y = data.iloc[1, :]/data.iloc[1, :].max()
+        else:
+            # assume data from Picard
+            data = pd.read_table(each, header=None, skiprows=11)
+            data = data.transpose()
+            normalize_y = data.iloc[1, :]
         fig.add_scatter(x=data.iloc[0, :], y=normalize_y, name=sample)
         all_fig.add_scatter(x=data.iloc[0, :], y=normalize_y, name=sample)
         prefix = '{}.geneBodyCoverage'.format(sample)
@@ -580,7 +588,7 @@ def CollectAlignmentSummaryMetrics(files:list, outdir=os.getcwd(), formats=('htm
     out_table = os.path.join(outdir, 'AlignmentSummaryMetrics.xls')
     data.to_csv(out_table, index=True, header=True, sep='\t')
 
-    for i in range(0, data.shape[1], 10):
+    for i in range(0, data.shape[1], 8):
         df = data.iloc[:, i: i+10]
         df.index.name = 'CATEGORY'
         df.reset_index(inplace=True)
@@ -734,6 +742,66 @@ def CollectTargetedPcrMetrics(files:list, outdir=os.getcwd(), formats=('html',),
         prefix = 'TargetedPcrMetrics_{}'.format(i + 1)
         draw(fig, prefix=prefix, outdir=outdir, formats=formats, height=height, width=width, scale=scale)
     return data
+
+
+def mkdir(path):
+    if not os.path.exists(path):
+        os.mkdir(path)
+    return path
+
+
+def make_slider(images:list, image_ids:list=None, image_desc:list=None, template="templates/slide.jinja2",
+                out='slider.html', link_images=False):
+    out_dir = os.path.dirname(out)
+    if not out_dir:
+        out_dir = os.getcwd()
+    else:
+        mkdir(out_dir)
+    if not images:
+        return
+
+    if link_images:
+        out_dir = os.path.join(out_dir, os.path.basename(out)[:-5]+'.images')
+        if not os.path.exists(out_dir):
+            os.mkdir(out_dir)
+        tmp_list = list()
+        for each in images:
+            target = os.path.join(out_dir, os.path.basename(each))
+            if os.path.exists(target):
+                continue
+            os.symlink(each, target)
+            tmp_list.append(target)
+        images = tmp_list
+
+    if not image_ids:
+        image_ids = [os.path.basename(x).split('.')[0] for x in images]
+    if len(image_ids) < len(images):
+        raise Exception('number of image ids is less than the number of images')
+
+    if not image_desc:
+        image_desc = ['']*len(images)
+    if len(image_desc) == 1:
+        image_desc = image_desc*len(images)
+    else:
+        if len(image_desc) < len(images):
+            raise Exception('number of image desc is less than the number of images')
+
+    # env = Environment(loader=FileSystemLoader("templates"))
+    # template = env.get_template("slide.jinja2")
+    template = Template(open(template).read())
+    img_info_dict = dict()
+    img_cls = ["slide"]*len(images)
+    img_cls[0] = "slide slide--current"
+    for img, img_id, desc, tag in zip(images, image_ids, image_desc, img_cls):
+        img_info_dict[img_id] = dict()
+        img_info_dict[img_id]['path'] = os.path.relpath(os.path.abspath(img), start=os.path.abspath(out_dir))
+        img_info_dict[img_id]['cls'] = tag
+        img_info_dict[img_id]['description'] = desc
+    # print(img_info_dict)
+    content = template.render(img_info_dict=img_info_dict)
+    with open(out, 'w', encoding='utf-8') as f:
+        f.write(content)
+    return out
 
 
 if __name__ == '__main__':
